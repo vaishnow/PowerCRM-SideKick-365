@@ -14,7 +14,7 @@ export type TYPE_DontShowInfo = { [infoName: string]: boolean };
 
 export const DRAWER_CONTAINER_ID = "drawercontainer";
 
-export const APPLICATION_NAME = "Dynamics SideKick";
+export const APPLICATION_NAME = "PowerCRM SideKick 365";
 export const MAIN_MENU_ID = "d365-sidekick-mainmenu";
 
 export const MESSAGE_SOURCE_WebPage = `${PROJECT_PREFIX}-webPage`;
