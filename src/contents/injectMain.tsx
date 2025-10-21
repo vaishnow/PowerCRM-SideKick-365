@@ -1,125 +1,97 @@
 import { unstable_ClassNameGenerator as ClassNameGenerator } from "@mui/material/className";
-import type { PlasmoCSConfig } from "plasmo";
+import type { PlasmoCSConfig, PlasmoCSUIJSXContainer, PlasmoRender } from "plasmo";
 import { createRoot } from "react-dom/client";
 
 import { MainScreen } from "~processes/main";
 import { ProcessButton } from "~utils/global/.processClass";
 import { waitForElm } from "~utils/global/common";
-import {
-    DRAWER_CONTAINER_ID} from "~utils/global/var";
+import { DRAWER_CONTAINER_ID, MESSAGE_SOURCE_Content, PROJECT_PREFIX } from "~utils/global/var";
 import XrmObserver from "~utils/global/XrmObserver";
-
-import { PROJECT_PREFIX } from "~utils/global/var";
 
 export const config: PlasmoCSConfig = {
     matches: ["*://*/*"],
     world: "MAIN"
 };
 
-const searchedScripts = [
-    "/uclient/scripts/cdnEndpointCheck.js",
-    "/uclient/scripts/MicrosoftAjax.js"
-];
+const searchedScripts = ["/uclient/scripts/cdnEndpointCheck.js", "/uclient/scripts/MicrosoftAjax.js"];
+var messageListenerReady = false;
 
-// window.onload = async () => {
-//     const isCRMD365 = Array.from(document.scripts).some(
-//         (script) =>
-//             searchedScripts.some(src => script.src.indexOf(src) !== -1)
-//     );
-//     console.log('This page is CRM:', isCRMD365);
-//     if (isCRMD365) {
-//         // injectScript(chrome.runtime.getURL("static/js/d365-sidekick.js"));
-//         SaveData(chrome.runtime.getURL(""), "extensionURL");
-//     }
-// }
+const onMessage = (event: MessageEvent) => {
+    if (event.data?.source === MESSAGE_SOURCE_Content && event.data?.type === `${PROJECT_PREFIX}messageListenerReady`) {
+        messageListenerReady = true;
+        window.removeEventListener("message", onMessage);
+    }
+};
+window.addEventListener("message", onMessage);
+
+export const getRootContainer = () =>
+    new Promise((resolve) => {
+        const checkAndResolve = () => {
+            const mainContent = document.querySelector("#mainContent");
+            const isCRMD365 = Array.from(document.scripts).some((script) =>
+                searchedScripts.some((src) => script.src.includes(src))
+            );
+
+            if (mainContent && isCRMD365 && messageListenerReady) {
+                const drawerContainer = document.createElement("div");
+                drawerContainer.id = ProcessButton.prefixId + DRAWER_CONTAINER_ID;
+                mainContent.append(drawerContainer);
+                observer.disconnect();
+                resolve(drawerContainer);
+            }
+        };
+
+        checkAndResolve();
+
+        const observer = new MutationObserver(checkAndResolve);
+        observer.observe(document.body, { childList: true, subtree: true });
+    });
+
+export const render: PlasmoRender<PlasmoCSUIJSXContainer> = async ({
+    createRootContainer // This creates the default root container
+}) => {
+    const rootContainer = await createRootContainer();
+
+    const root = createRoot(rootContainer, {
+        identifierPrefix: ProcessButton.prefixId
+    });
+    root.render(<MainScreen />);
+};
 
 const fileName = "d365-sidekick";
 
-// var injectScript = function (file: string): void {
-//     var existingScript = document.querySelector("script[src='" + file + "']");
-//     if (existingScript) {
-//         console.log("Script " + file + " removed");
-//         existingScript.parentElement?.removeChild(existingScript);
-//     }
-//     var scriptTag = document.createElement("script");
-//     scriptTag.setAttribute("type", "text/javascript");
-//     scriptTag.setAttribute("src", file);
-//     document.body.appendChild(scriptTag);
-// };
+// function initExtension() {
+//     waitForElm(document, "#mainContent", { infiniteWait: true }).then((mainNode) => {
+//         const drawerContainer = document.createElement("div");
+//         drawerContainer.setAttribute("id", ProcessButton.prefixId + DRAWER_CONTAINER_ID);
+//         mainNode?.append(drawerContainer);
 
-// function SaveData(data: string, id: string): void {
-//     var existingNode = document.querySelector("#" + id);
-//     if (existingNode) {
-//         console.log("Node " + id + " removed");
-//         existingNode.parentElement?.removeChild(existingNode);
-//     }
-//     var imageElement = document.createElement("saving");
-//     imageElement.setAttribute("data", data);
-//     imageElement.setAttribute("style", "display:none;");
-//     imageElement.setAttribute("id", id);
-//     document.body.appendChild(imageElement);
+//         const root = createRoot(drawerContainer, {
+//             identifierPrefix: ProcessButton.prefixId
+//         });
+//         root.render(<MainScreen />);
+//     });
+
+//     new XrmObserver();
 // }
 
-function initExtension() {
-    waitForElm(document, "#mainContent", { infiniteWait: true }).then(
-        (mainNode) => {
-            const drawerContainer = document.createElement("div");
-            drawerContainer.setAttribute(
-                "id",
-                ProcessButton.prefixId + DRAWER_CONTAINER_ID
-            );
-            mainNode?.append(drawerContainer);
-
-            const root = createRoot(drawerContainer, {
-                identifierPrefix: ProcessButton.prefixId
-            });
-            root.render(<MainScreen />);
-        }
-    );
-
-    new XrmObserver();
-}
-
-setTimeout(async () => {
-    const isCRMD365 = Array.from(document.scripts).some((script) =>
-        searchedScripts.some((src) => script.src.indexOf(src) !== -1)
-    );
-    console.log("This page is CRM:", isCRMD365);
-    if (isCRMD365) {
-        // injectScript(chrome.runtime.getURL(`static/js/${fileName}.js`));
-        // SaveData(chrome.runtime.getURL(""), "extensionURL");
-
-        if (window.top && window.top.window === window) {
-            var loading = setInterval(() => {
-                if (!!window.top.Xrm) {
-                    clearInterval(loading);
-                    initExtension();
-                }
-            }, 1000);
-        }
-    }
-}, 2000);
-
-
-// window.addEventListener("message", (event) => {
-//     if (event.source !== window) return;
-//     if (event.data.source !== MESSAGE_SOURCE_WebPage) return;
-
-//     const messageId = event.data.id;
-
-//     chrome.runtime.sendMessage(
-//         { type: event.data.type, data: event.data.data },
-//         function (response: any) {
-//             window.postMessage(
-//                 { id: messageId, source: MESSAGE_SOURCE_Content, response },
-//                 "*"
-//             );
-//         }
+// setTimeout(async () => {
+//     const isCRMD365 = Array.from(document.scripts).some((script) =>
+//         searchedScripts.some((src) => script.src.indexOf(src) !== -1)
 //     );
-// });
+//     console.log("This page is CRM:", isCRMD365);
+//     if (isCRMD365) {
+//         if (window.top && window.top.window === window) {
+//             var loading = setInterval(() => {
+//                 if (!!window.top.Xrm) {
+//                     clearInterval(loading);
+//                     initExtension();
+//                 }
+//             }, 1000);
+//         }
+//     }
+// }, 2000);
 
-ClassNameGenerator.configure(
-    (componentName) => `${PROJECT_PREFIX}${componentName.replace("Mui", "")}`
-);
+ClassNameGenerator.configure((componentName) => `${PROJECT_PREFIX}${componentName.replace("Mui", "")}`);
 
 export default () => null;

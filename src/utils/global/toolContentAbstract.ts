@@ -33,12 +33,10 @@ export function buildGetRootContainer<T extends ProcessButton>(toolClass: Proces
     }
 
     const getRootContainer = () =>
-        new Promise((resolve) => {
-            const checkInterval = setInterval(() => {
+        new Promise(() => {
+            setInterval(() => {
                 const rootContainer = document.querySelector(toolId);
                 if (rootContainer) {
-                    // clearInterval(checkInterval);
-                    // resolve(rootContainer);
                     mountIfNeeded(rootContainer);
                 } else {
                     unmountIfNeeded();
@@ -47,11 +45,4 @@ export function buildGetRootContainer<T extends ProcessButton>(toolClass: Proces
         });
 
     return getRootContainer;
-
-    // export const render: PlasmoRender<PlasmoCSUIJSXContainer> = async ({ createRootContainer }) => {
-    //     const rootContainer = await createRootContainer();
-    //     mountIfNeeded(rootContainer);
-    //     // const root = createRoot(rootContainer);
-    //     // root.render(instanceProcess);
-    // };
 }
