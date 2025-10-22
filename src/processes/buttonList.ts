@@ -85,5 +85,4 @@ export const defaultToolList: StorageConfiguration[] = ToolPanelButtonList.map((
 // force refresh dirtyfields
 
 // uuid module path wrong
-// related record more than 10Mo ????
 // allow to reduce main column

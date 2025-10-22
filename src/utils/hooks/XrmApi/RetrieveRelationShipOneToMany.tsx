@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { debugLog } from '../../global/common';
-import { RelationShipMetadata, RelationShipMetadataOneToMany } from '../../types/requestsType';
+import type { RelationShipMetadata, RelationShipMetadataOneToMany } from '../../types/requestsType';
 
 export function RetrieveRelationShipOneToMany(entityname: string): [RelationShipMetadataOneToMany[], boolean] {
 

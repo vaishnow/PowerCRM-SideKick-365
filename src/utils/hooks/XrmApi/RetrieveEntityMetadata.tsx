@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { debugLog } from '../../global/common';
-import { Entity } from '../../types/requestsType';
+import type { Entity } from '../../types/requestsType';
 
 export function RetrieveEntityMetadata(entityname: string) {
 

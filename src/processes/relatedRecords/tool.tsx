@@ -1,6 +1,7 @@
 import { ThemeProvider } from "@emotion/react";
-import { ExpandLess, ExpandMore } from "@mui/icons-material";
 import SubdirectoryArrowRightIcon from "@mui/icons-material/SubdirectoryArrowRight";
+import ExpandLess from "@mui/icons-material/ExpandLess";
+import ExpandMore from "@mui/icons-material/ExpandMore";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Collapse from "@mui/material/Collapse";
@@ -13,14 +14,7 @@ import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
 import { createTheme } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
-import React, {
-    forwardRef,
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState
-} from "react";
+import React, { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHover } from "usehooks-ts";
 
 import DontShowInfo from "../../utils/components/DontShowInfo";
@@ -28,11 +22,7 @@ import FilterInput from "../../utils/components/FilterInput";
 import RecordContextualMenu from "../../utils/components/RecordContextualMenu";
 import RecordSearchBar from "../../utils/components/RecordSearchBar";
 import TooltipInfo from "../../utils/components/TooltipInfo";
-import {
-    ProcessButton,
-    type ProcessProps,
-    type ProcessRef
-} from "../../utils/global/.processClass";
+import { ProcessButton, type ProcessProps, type ProcessRef } from "../../utils/global/.processClass";
 import { debugLog } from "../../utils/global/common";
 import { useCurrentRecord } from "../../utils/hooks/use/useCurrentRecord";
 import { RetrieveAttributes } from "../../utils/hooks/XrmApi/RetrieveAttributes";
@@ -41,10 +31,7 @@ import { RetrieveRelatedRecords } from "../../utils/hooks/XrmApi/RetrieveRelated
 import { RetrieveRelationShipManyToMany } from "../../utils/hooks/XrmApi/RetrieveRelationShipManyToMany";
 import { RetrieveRelationShipManyToOne } from "../../utils/hooks/XrmApi/RetrieveRelationShipManyToOne";
 import { RetrieveRelationShipOneToMany } from "../../utils/hooks/XrmApi/RetrieveRelationShipOneToMany";
-import {
-    RelationshipType,
-    type RelationShipMetadata
-} from "../../utils/types/requestsType";
+import { RelationshipType, type RelationShipMetadata } from "../../utils/types/requestsType";
 
 const theme = createTheme({
     components: {
@@ -67,135 +54,105 @@ class RelatedRecordsProcess extends ProcessButton {
     }
 }
 
-const RelatedRecords = forwardRef<ProcessRef, ProcessProps>(
-    function RelatedRecords(props: ProcessProps, ref) {
-        const {
-            entityName: currentEntityName,
-            recordId: currentRecordId,
-            isEntityRecord
-        } = useCurrentRecord();
+const RelatedRecords = forwardRef<ProcessRef, ProcessProps>(function RelatedRecords(props: ProcessProps, ref) {
+    const { entityName: currentEntityName, recordId: currentRecordId, isEntityRecord } = useCurrentRecord();
 
-        const [loading, setLoading] = useState<boolean>(true);
+    const [loading, setLoading] = useState<boolean>(true);
 
-        const [entityName, _setEntityName] = useState<string>(
-            currentEntityName ?? ""
-        );
-        const [recordId, setRecordId] = useState<string[]>([
-            currentRecordId ?? ""
-        ]);
+    const [entityName, _setEntityName] = useState<string>(currentEntityName ?? "");
+    const [recordId, setRecordId] = useState<string[]>([currentRecordId ?? ""]);
 
-        const [filter, setFilter] = useState<string>("");
+    const [filter, setFilter] = useState<string>("");
 
-        const firstRecordId = useMemo(() => recordId.at(0) ?? "", [recordId]);
+    const firstRecordId = useMemo(() => recordId.at(0) ?? "", [recordId]);
 
-        const resetRecord = useCallback(() => {
-            _setEntityName(currentEntityName ?? "");
-            setRecordId([]);
-            setTimeout(() => {
-                setRecordId([currentRecordId ?? ""]);
-            }, 100);
-        }, [currentEntityName, currentRecordId, _setEntityName, setRecordId]);
+    const resetRecord = useCallback(() => {
+        _setEntityName(currentEntityName ?? "");
+        setRecordId([]);
+        setTimeout(() => {
+            setRecordId([currentRecordId ?? ""]);
+        }, 100);
+    }, [currentEntityName, currentRecordId, _setEntityName, setRecordId]);
 
-        useEffect(() => {
-            if (loading) {
-                if (currentEntityName && currentRecordId) {
-                    resetRecord();
-                    setLoading(false);
-                }
+    useEffect(() => {
+        if (loading) {
+            if (currentEntityName && currentRecordId) {
+                resetRecord();
+                setLoading(false);
             }
-        }, [currentEntityName, currentRecordId, loading, resetRecord]);
+        }
+    }, [currentEntityName, currentRecordId, loading, resetRecord]);
 
-        const setEntityName = useCallback((newValue: string) => {
-            _setEntityName(newValue);
-            setLoading(false);
-        }, []);
+    const setEntityName = useCallback((newValue: string) => {
+        _setEntityName(newValue);
+        setLoading(false);
+    }, []);
 
-        const [manyToMany, isManyToManyFetching] =
-            RetrieveRelationShipManyToMany(entityName);
-        const [oneToMany, isOneToManyFetching] =
-            RetrieveRelationShipOneToMany(entityName);
-        const [manyToOne, isManyToOneFetching] =
-            RetrieveRelationShipManyToOne(entityName);
+    const [manyToMany, isManyToManyFetching] = RetrieveRelationShipManyToMany(entityName);
+    const [oneToMany, isOneToManyFetching] = RetrieveRelationShipOneToMany(entityName);
+    const [manyToOne, isManyToOneFetching] = RetrieveRelationShipManyToOne(entityName);
 
-        return (
-            <ThemeProvider theme={theme}>
-                <Stack
-                    spacing={0.5}
-                    height="calc(100% - 10px)"
-                    padding="10px"
-                    pr={0}
-                    alignItems="center"
-                    overflow="scroll">
-                    <DontShowInfo storageName={`${props.id}-maininfo`}>
-                        <Typography
-                            variant="body2"
-                            fontSize="unset"
-                            lineHeight="unset">
-                            Click on a record row to open the main form in a
-                            dialog.
-                        </Typography>
-                        <Typography
-                            variant="body2"
-                            fontSize="unset"
-                            lineHeight="unset">
-                            By right-clicking, you can access a context menu
-                            that allows you to open the record in a new tab.
-                        </Typography>
-                    </DontShowInfo>
+    return (
+        <ThemeProvider theme={theme}>
+            <Stack spacing={0.5} height="calc(100% - 10px)" padding="10px" pr={0} alignItems="center" overflow="scroll">
+                <DontShowInfo storageName={`${props.id}-maininfo`}>
+                    <Typography variant="body2" fontSize="unset" lineHeight="unset">
+                        Click on a record row to open the main form in a dialog.
+                    </Typography>
+                    <Typography variant="body2" fontSize="unset" lineHeight="unset">
+                        By right-clicking, you can access a context menu that allows you to open the record in a new
+                        tab.
+                    </Typography>
+                </DontShowInfo>
 
-                    <Stack direction="column" spacing={1} pt={1} pb={0.5}>
-                        <RecordSearchBar
-                            entityName={entityName}
-                            recordIds={recordId}
-                            setEntityName={setEntityName}
-                            setRecordIds={setRecordId}
-                            reset={resetRecord}
-                            theme={theme}
-                        />
-                        <FilterInput
-                            fullWidth
-                            placeholder="Search by name"
-                            returnFilterInput={setFilter}
-                        />
-                    </Stack>
-
-                    {!isManyToManyFetching && (
-                        <RelationShipList
-                            title="Many To Many"
-                            relationShipMetadata={manyToMany}
-                            key={"manytomany"}
-                            entityName={entityName}
-                            recordId={firstRecordId}
-                            filter={filter}
-                        />
-                    )}
-
-                    {!isOneToManyFetching && (
-                        <RelationShipList
-                            title="One To Many"
-                            relationShipMetadata={oneToMany}
-                            key={"oneToMany"}
-                            entityName={entityName}
-                            recordId={firstRecordId}
-                            filter={filter}
-                        />
-                    )}
-
-                    {!isManyToOneFetching && (
-                        <RelationShipList
-                            title="Many To One"
-                            relationShipMetadata={manyToOne}
-                            key={"manyToOne"}
-                            entityName={entityName}
-                            recordId={firstRecordId}
-                            filter={filter}
-                        />
-                    )}
+                <Stack direction="column" spacing={1} pt={1} pb={0.5}>
+                    <RecordSearchBar
+                        entityName={entityName}
+                        recordIds={recordId}
+                        setEntityName={setEntityName}
+                        setRecordIds={setRecordId}
+                        reset={resetRecord}
+                        theme={theme}
+                    />
+                    <FilterInput fullWidth placeholder="Search by name" returnFilterInput={setFilter} />
                 </Stack>
-            </ThemeProvider>
-        );
-    }
-);
+
+                {!isManyToManyFetching && (
+                    <RelationShipList
+                        title="Many To Many"
+                        relationShipMetadata={manyToMany}
+                        key={"manytomany"}
+                        entityName={entityName}
+                        recordId={firstRecordId}
+                        filter={filter}
+                    />
+                )}
+
+                {!isOneToManyFetching && (
+                    <RelationShipList
+                        title="One To Many"
+                        relationShipMetadata={oneToMany}
+                        key={"oneToMany"}
+                        entityName={entityName}
+                        recordId={firstRecordId}
+                        filter={filter}
+                    />
+                )}
+
+                {!isManyToOneFetching && (
+                    <RelationShipList
+                        title="Many To One"
+                        relationShipMetadata={manyToOne}
+                        key={"manyToOne"}
+                        entityName={entityName}
+                        recordId={firstRecordId}
+                        filter={filter}
+                    />
+                )}
+            </Stack>
+        </ThemeProvider>
+    );
+});
 
 interface RelationShipListProps<T extends RelationShipMetadata> {
     title: string;
@@ -204,16 +161,8 @@ interface RelationShipListProps<T extends RelationShipMetadata> {
     recordId: string;
     filter: string;
 }
-function RelationShipList<T extends RelationShipMetadata>(
-    props: RelationShipListProps<T>
-) {
-    const {
-        relationShipMetadata: relationShipMetadataList,
-        title,
-        entityName,
-        recordId,
-        filter
-    } = props;
+function RelationShipList<T extends RelationShipMetadata>(props: RelationShipListProps<T>) {
+    const { relationShipMetadata: relationShipMetadataList, title, entityName, recordId, filter } = props;
 
     const [open, setOpen] = useState(false);
     const [sortArray, setSortArray] = useState<(number | undefined)[]>([]);
@@ -244,9 +193,7 @@ function RelationShipList<T extends RelationShipMetadata>(
     const numberOfRelationshipSmall = useMemo(() => {
         if (!relationShipMetadataList) return "?";
         const max = 999;
-        return relationShipMetadataList.length > max
-            ? max + "+"
-            : relationShipMetadataList.length;
+        return relationShipMetadataList.length > max ? max + "+" : relationShipMetadataList.length;
     }, [relationShipMetadataList]);
 
     useEffect(() => {
@@ -279,10 +226,7 @@ function RelationShipList<T extends RelationShipMetadata>(
                 component="nav"
                 aria-labelledby="nested-list-subheader"
                 subheader={
-                    <ListItemButton
-                        component="div"
-                        id="nested-list-subheader"
-                        onClick={handleClick}>
+                    <ListItemButton component="div" id="nested-list-subheader" onClick={handleClick}>
                         <ListItemIcon>
                             <Chip
                                 ref={numberOfRelationshipChip}
@@ -302,9 +246,7 @@ function RelationShipList<T extends RelationShipMetadata>(
                     {sortArray
                         .map((s, index) => ({ index: index, number: s }))
                         .sort((pA, pB) =>
-                            pA.number !== undefined && pB.number !== undefined
-                                ? pB.number - pA.number
-                                : -1
+                            pA.number !== undefined && pB.number !== undefined ? pB.number - pA.number : -1
                         )
                         .map((position) => relationShipItems[position.index])}
                 </Collapse>
@@ -324,43 +266,28 @@ interface RelationShipItemProps {
     filter: string;
 }
 const RelationShipItem = React.memo((props: RelationShipItemProps) => {
-    const {
-        relationShipMetadata,
-        entityName,
-        recordId,
-        sendContentToParent,
-        index,
-        filter
-    } = props;
+    const { relationShipMetadata, entityName, recordId, sendContentToParent, index, filter } = props;
 
     const [open, setOpen] = useState(false);
 
     const relationShipFetchInfo = useMemo(() => {
-        debugLog(
-            "relationShipFetchInfo",
-            relationShipMetadata.SchemaName,
-            relationShipMetadata.RelationshipType
-        );
+        debugLog("relationShipFetchInfo", relationShipMetadata.SchemaName, relationShipMetadata.RelationshipType);
         switch (relationShipMetadata.RelationshipType) {
             case RelationshipType.ManyToManyRelationship:
                 if (relationShipMetadata.Entity1LogicalName === entityName) {
                     return [
                         {
-                            relationshipSchemaName:
-                                relationShipMetadata.SchemaName,
+                            relationshipSchemaName: relationShipMetadata.SchemaName,
                             entityName: relationShipMetadata.Entity2LogicalName,
-                            navigationPropertyName:
-                                relationShipMetadata.Entity1NavigationPropertyName
+                            navigationPropertyName: relationShipMetadata.Entity1NavigationPropertyName
                         }
                     ];
                 } else {
                     return [
                         {
-                            relationshipSchemaName:
-                                relationShipMetadata.SchemaName,
+                            relationshipSchemaName: relationShipMetadata.SchemaName,
                             entityName: relationShipMetadata.Entity1LogicalName,
-                            navigationPropertyName:
-                                relationShipMetadata.Entity2NavigationPropertyName
+                            navigationPropertyName: relationShipMetadata.Entity2NavigationPropertyName
                         }
                     ];
                 }
@@ -369,8 +296,7 @@ const RelationShipItem = React.memo((props: RelationShipItemProps) => {
                     {
                         relationshipSchemaName: relationShipMetadata.SchemaName,
                         entityName: relationShipMetadata.ReferencingEntity,
-                        navigationPropertyName:
-                            relationShipMetadata.ReferencedEntityNavigationPropertyName
+                        navigationPropertyName: relationShipMetadata.ReferencedEntityNavigationPropertyName
                     }
                 ];
             case RelationshipType.ManyToOneRelationship:
@@ -378,18 +304,13 @@ const RelationShipItem = React.memo((props: RelationShipItemProps) => {
                     {
                         relationshipSchemaName: relationShipMetadata.SchemaName,
                         entityName: relationShipMetadata.ReferencedEntity,
-                        navigationPropertyName:
-                            relationShipMetadata.ReferencingEntityNavigationPropertyName
+                        navigationPropertyName: relationShipMetadata.ReferencingEntityNavigationPropertyName
                     }
                 ];
         }
     }, [entityName, relationShipMetadata]);
 
-    const [relatedRecordsDict, isFetching] = RetrieveRelatedRecords(
-        entityName,
-        recordId,
-        relationShipFetchInfo
-    );
+    const [relatedRecordsDict, isFetching] = RetrieveRelatedRecords(entityName, recordId, relationShipFetchInfo);
 
     const relatedRecords = useMemo(() => {
         return relatedRecordsDict[relationShipMetadata.SchemaName];
@@ -417,344 +338,8 @@ const RelationShipItem = React.memo((props: RelationShipItemProps) => {
         setOpen((prev) => !prev);
     };
 
-    const tooltipContent = useMemo(() => {
-        let details;
-        switch (relationShipMetadata.RelationshipType) {
-            case RelationshipType.ManyToManyRelationship:
-                details = (
-                    <>
-                        <ListItem sx={sxTooltip}>
-                            <ListItemText>
-                                <Typography variant="body2">
-                                    <strong>Entity1LogicalName:</strong>{" "}
-                                    <i>
-                                        {"" +
-                                            relationShipMetadata.Entity1LogicalName}
-                                    </i>
-                                </Typography>
-                            </ListItemText>
-                        </ListItem>
-                        <ListItem sx={sxTooltip}>
-                            <ListItemText>
-                                <Typography variant="body2">
-                                    <strong>
-                                        Entity1NavigationPropertyName:
-                                    </strong>{" "}
-                                    <i>
-                                        {"" +
-                                            relationShipMetadata.Entity1NavigationPropertyName}
-                                    </i>
-                                </Typography>
-                            </ListItemText>
-                        </ListItem>
-                        <ListItem sx={sxTooltip}>
-                            <ListItemText>
-                                <Typography variant="body2">
-                                    <strong>Entity1IntersectAttribute:</strong>{" "}
-                                    <i>
-                                        {
-                                            relationShipMetadata.Entity1IntersectAttribute
-                                        }
-                                    </i>
-                                </Typography>
-                            </ListItemText>
-                        </ListItem>
-                        <ListItem sx={sxTooltip}>
-                            <ListItemText>
-                                <Typography variant="body2">
-                                    <strong>Entity2LogicalName:</strong>{" "}
-                                    <i>
-                                        {
-                                            relationShipMetadata.Entity2LogicalName
-                                        }
-                                    </i>
-                                </Typography>
-                            </ListItemText>
-                        </ListItem>
-                        <ListItem sx={sxTooltip}>
-                            <ListItemText>
-                                <Typography variant="body2">
-                                    <strong>
-                                        Entity2NavigationPropertyName:
-                                    </strong>{" "}
-                                    <i>
-                                        {
-                                            relationShipMetadata.Entity2NavigationPropertyName
-                                        }
-                                    </i>
-                                </Typography>
-                            </ListItemText>
-                        </ListItem>
-                        <ListItem sx={sxTooltip}>
-                            <ListItemText>
-                                <Typography variant="body2">
-                                    <strong>Entity2IntersectAttribute:</strong>{" "}
-                                    <i>
-                                        {
-                                            relationShipMetadata.Entity2IntersectAttribute
-                                        }
-                                    </i>
-                                </Typography>
-                            </ListItemText>
-                        </ListItem>
-                        <ListItem sx={sxTooltip}>
-                            <ListItemText>
-                                <Typography variant="body2">
-                                    <strong>IntersectEntityName:</strong>{" "}
-                                    <i>
-                                        {
-                                            relationShipMetadata.IntersectEntityName
-                                        }
-                                    </i>
-                                </Typography>
-                            </ListItemText>
-                        </ListItem>
-                    </>
-                );
-                break;
-            default:
-                details = (
-                    <>
-                        <ListItem sx={sxTooltip}>
-                            <ListItemText>
-                                <Typography variant="body2">
-                                    <strong>ReferencedEntity:</strong>{" "}
-                                    <i>
-                                        {relationShipMetadata.ReferencedEntity}
-                                    </i>
-                                </Typography>
-                            </ListItemText>
-                        </ListItem>
-                        <ListItem sx={sxTooltip}>
-                            <ListItemText>
-                                <Typography variant="body2">
-                                    <strong>ReferencedAttribute:</strong>{" "}
-                                    <i>
-                                        {
-                                            relationShipMetadata.ReferencedAttribute
-                                        }
-                                    </i>
-                                </Typography>
-                            </ListItemText>
-                        </ListItem>
-                        <ListItem sx={sxTooltip}>
-                            <ListItemText>
-                                <Typography variant="body2">
-                                    <strong>
-                                        ReferencedEntityNavigationPropertyName:
-                                    </strong>{" "}
-                                    <i>
-                                        {
-                                            relationShipMetadata.ReferencedEntityNavigationPropertyName
-                                        }
-                                    </i>
-                                </Typography>
-                            </ListItemText>
-                        </ListItem>
-                        <ListItem sx={sxTooltip}>
-                            <ListItemText>
-                                <Typography variant="body2">
-                                    <strong>ReferencingEntity:</strong>{" "}
-                                    <i>
-                                        {relationShipMetadata.ReferencingEntity}
-                                    </i>
-                                </Typography>
-                            </ListItemText>
-                        </ListItem>
-                        <ListItem sx={sxTooltip}>
-                            <ListItemText>
-                                <Typography variant="body2">
-                                    <strong>ReferencingAttribute:</strong>{" "}
-                                    <i>
-                                        {
-                                            relationShipMetadata.ReferencingAttribute
-                                        }
-                                    </i>
-                                </Typography>
-                            </ListItemText>
-                        </ListItem>
-                        <ListItem sx={sxTooltip}>
-                            <ListItemText>
-                                <Typography variant="body2">
-                                    <strong>
-                                        ReferencingEntityNavigationPropertyName:
-                                    </strong>{" "}
-                                    <i>
-                                        {
-                                            relationShipMetadata.ReferencingEntityNavigationPropertyName
-                                        }
-                                    </i>
-                                </Typography>
-                            </ListItemText>
-                        </ListItem>
-                        <Divider component="li" sx={{ my: 0.5, mb: 1 }} />
-                        <ListItem sx={sxTooltip}>
-                            <List
-                                subheader={
-                                    <Typography variant="body2">
-                                        <strong>CascadeConfiguration:</strong>
-                                    </Typography>
-                                }>
-                                <ListItem sx={sxTooltip}>
-                                    <ListItemText>
-                                        <Typography variant="body2">
-                                            <strong>Archive -</strong>{" "}
-                                            <i>
-                                                {
-                                                    relationShipMetadata
-                                                        .CascadeConfiguration
-                                                        .Archive
-                                                }
-                                            </i>
-                                        </Typography>
-                                    </ListItemText>
-                                </ListItem>
-                                <ListItem sx={sxTooltip}>
-                                    <ListItemText>
-                                        <Typography variant="body2">
-                                            <strong>Assign -</strong>{" "}
-                                            <i>
-                                                {
-                                                    relationShipMetadata
-                                                        .CascadeConfiguration
-                                                        .Assign
-                                                }
-                                            </i>
-                                        </Typography>
-                                    </ListItemText>
-                                </ListItem>
-                                <ListItem sx={sxTooltip}>
-                                    <ListItemText>
-                                        <Typography variant="body2">
-                                            <strong>Delete -</strong>{" "}
-                                            <i>
-                                                {
-                                                    relationShipMetadata
-                                                        .CascadeConfiguration
-                                                        .Delete
-                                                }
-                                            </i>
-                                        </Typography>
-                                    </ListItemText>
-                                </ListItem>
-                                <ListItem sx={sxTooltip}>
-                                    <ListItemText>
-                                        <Typography variant="body2">
-                                            <strong>Merge -</strong>{" "}
-                                            <i>
-                                                {
-                                                    relationShipMetadata
-                                                        .CascadeConfiguration
-                                                        .Merge
-                                                }
-                                            </i>
-                                        </Typography>
-                                    </ListItemText>
-                                </ListItem>
-                                <ListItem sx={sxTooltip}>
-                                    <ListItemText>
-                                        <Typography variant="body2">
-                                            <strong>Reparent -</strong>{" "}
-                                            <i>
-                                                {
-                                                    relationShipMetadata
-                                                        .CascadeConfiguration
-                                                        .Reparent
-                                                }
-                                            </i>
-                                        </Typography>
-                                    </ListItemText>
-                                </ListItem>
-                                <ListItem sx={sxTooltip}>
-                                    <ListItemText>
-                                        <Typography variant="body2">
-                                            <strong>RollupView -</strong>{" "}
-                                            <i>
-                                                {
-                                                    relationShipMetadata
-                                                        .CascadeConfiguration
-                                                        .RollupView
-                                                }
-                                            </i>
-                                        </Typography>
-                                    </ListItemText>
-                                </ListItem>
-                                <ListItem sx={sxTooltip}>
-                                    <ListItemText>
-                                        <Typography variant="body2">
-                                            <strong>Share -</strong>{" "}
-                                            <i>
-                                                {
-                                                    relationShipMetadata
-                                                        .CascadeConfiguration
-                                                        .Share
-                                                }
-                                            </i>
-                                        </Typography>
-                                    </ListItemText>
-                                </ListItem>
-                                <ListItem sx={sxTooltip}>
-                                    <ListItemText>
-                                        <Typography variant="body2">
-                                            <strong>Unshare -</strong>{" "}
-                                            <i>
-                                                {
-                                                    relationShipMetadata
-                                                        .CascadeConfiguration
-                                                        .Unshare
-                                                }
-                                            </i>
-                                        </Typography>
-                                    </ListItemText>
-                                </ListItem>
-                            </List>
-                        </ListItem>
-                    </>
-                );
-                break;
-        }
-        return (
-            <List
-                sx={{ p: "0px 16px" }}
-                subheader={
-                    <Typography variant="button">
-                        <strong>{relationShipMetadata.SchemaName}</strong>
-                    </Typography>
-                }>
-                <ListItem sx={{ ...sxTooltip, mt: 0.5 }}>
-                    <ListItemText>
-                        <Typography variant="body2">
-                            <strong>IsCustomRelationship:</strong>{" "}
-                            <i>
-                                {String(
-                                    relationShipMetadata.IsCustomRelationship
-                                )}
-                            </i>
-                        </Typography>
-                    </ListItemText>
-                </ListItem>
-                <ListItem sx={sxTooltip}>
-                    <ListItemText>
-                        <Typography variant="body2">
-                            <strong>IsValidForAdvancedFind:</strong>{" "}
-                            <i>
-                                {String(
-                                    relationShipMetadata.IsValidForAdvancedFind
-                                )}
-                            </i>
-                        </Typography>
-                    </ListItemText>
-                </ListItem>
-                {details}
-            </List>
-        );
-    }, [relationShipMetadata]);
-
     const isVisible = useMemo(
-        () =>
-            relationShipMetadata.SchemaName.toLowerCase().includes(
-                filter.toLowerCase()
-            ),
+        () => relationShipMetadata.SchemaName.toLowerCase().includes(filter.toLowerCase()),
         [filter, relationShipMetadata.SchemaName]
     );
 
@@ -764,14 +349,12 @@ const RelationShipItem = React.memo((props: RelationShipItemProps) => {
             sx={{ p: 0, flexDirection: "column", alignItems: "stretch" }}>
             <TooltipInfo
                 enterDelay={500}
-                title={tooltipContent}
+                title={<RelatedRecordTooltip relationShipMetadata={relationShipMetadata} />}
                 arrow
                 placement="left"
                 disableFocusListener
                 maxWidth={false}>
-                <ListItemButton
-                    onClick={handleClick}
-                    sx={{ display: isVisible ? "flex" : "none" }}>
+                <ListItemButton onClick={handleClick} sx={{ display: isVisible ? "flex" : "none" }}>
                     <ListItemIcon>
                         <SubdirectoryArrowRightIcon />
                         <Chip
@@ -807,15 +390,8 @@ const RelationShipItem = React.memo((props: RelationShipItemProps) => {
                 </ListItemButton>
             </TooltipInfo>
             {
-                <List
-                    component="div"
-                    disablePadding
-                    sx={{ display: isVisible ? "block" : "none" }}>
-                    <Collapse
-                        in={open}
-                        timeout="auto"
-                        unmountOnExit
-                        mountOnEnter>
+                <List component="div" disablePadding sx={{ display: isVisible ? "block" : "none" }}>
+                    <Collapse in={open} timeout="auto" unmountOnExit mountOnEnter>
                         {relatedRecords?.map((relatedRecord) => {
                             return (
                                 <RelatedRecordsItem
@@ -842,11 +418,7 @@ const RelatedRecordsItem = React.memo((props: RelatedRecordsItemProps) => {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
     const primaryNameAttribute = RetrievePrimaryNameAttribute(entityName);
-    const [recordFetched, isFetching] = RetrieveAttributes(
-        entityName,
-        recordId,
-        [primaryNameAttribute]
-    );
+    const [recordFetched, isFetching] = RetrieveAttributes(entityName, recordId, [primaryNameAttribute]);
     const displayName: string = useMemo(
         () => primaryNameAttribute && recordFetched[primaryNameAttribute],
         [recordFetched, primaryNameAttribute]
@@ -862,9 +434,7 @@ const RelatedRecordsItem = React.memo((props: RelatedRecordsItemProps) => {
 
     const handleClick = () => {
         if (!entityName || !recordId) return;
-        Xrm.Utility.showProgressIndicator(
-            `Opening ${displayName} (${entityName}/${recordId})`
-        );
+        Xrm.Utility.showProgressIndicator(`Opening ${displayName} (${entityName}/${recordId})`);
         setTimeout(() => {
             Xrm.Utility.closeProgressIndicator();
         }, 1000);
@@ -886,15 +456,11 @@ const RelatedRecordsItem = React.memo((props: RelatedRecordsItemProps) => {
 
     return (
         <ListItem key={"relatedrecorditem" + recordId} sx={{ p: 0 }}>
-            <ListItemButton
-                sx={{ pl: 4 }}
-                onContextMenu={handleOpenContextualMenu}
-                onClick={handleClick}>
+            <ListItemButton sx={{ pl: 4 }} onContextMenu={handleOpenContextualMenu} onClick={handleClick}>
                 <ListItemText
                     primary={
                         <>
-                            <b>{displayName || "No name"}</b>{" "}
-                            <i>({recordId})</i>
+                            <b>{displayName || "No name"}</b> <i>({recordId})</i>
                         </>
                     }
                 />
@@ -910,5 +476,98 @@ const RelatedRecordsItem = React.memo((props: RelatedRecordsItemProps) => {
     );
 });
 
+function RelatedRecordTooltipListItem(props: { title: string; content: string }) {
+    return (
+        <ListItem sx={sxTooltip}>
+            <ListItemText>
+                <Typography variant="body2">
+                    <strong>{props.title}:</strong> <i>{"" + props.content}</i>
+                </Typography>
+            </ListItemText>
+        </ListItem>
+    );
+}
+
+interface RelatedRecordTooltipProps {
+    relationShipMetadata: RelationShipMetadata;
+}
+function RelatedRecordTooltip(props: RelatedRecordTooltipProps) {
+    const { relationShipMetadata } = props;
+
+    const details = useMemo(() => {
+        switch (relationShipMetadata.RelationshipType) {
+            case RelationshipType.ManyToManyRelationship:
+                return (
+                    <>
+                        <RelatedRecordTooltipListItem title="Entity1LogicalName" content={relationShipMetadata.Entity1LogicalName} />
+                        <RelatedRecordTooltipListItem title="Entity1NavigationPropertyName" content={relationShipMetadata.Entity1NavigationPropertyName} />
+                        <RelatedRecordTooltipListItem title="Entity1IntersectAttribute" content={relationShipMetadata.Entity1IntersectAttribute} />
+                        <RelatedRecordTooltipListItem title="Entity2LogicalName" content={relationShipMetadata.Entity2LogicalName} />
+                        <RelatedRecordTooltipListItem title="Entity2NavigationPropertyName" content={relationShipMetadata.Entity2NavigationPropertyName} />
+                        <RelatedRecordTooltipListItem title="Entity2IntersectAttribute" content={relationShipMetadata.Entity2IntersectAttribute} />
+                        <RelatedRecordTooltipListItem title="IntersectEntityName" content={relationShipMetadata.IntersectEntityName} />
+                    </>
+                );
+            default:
+                return (
+                    <>
+                        <RelatedRecordTooltipListItem title="ReferencedEntity" content={relationShipMetadata.ReferencedEntity} />
+                        <RelatedRecordTooltipListItem title="ReferencedAttribute" content={relationShipMetadata.ReferencedAttribute} />
+                        <RelatedRecordTooltipListItem title="ReferencedEntityNavigationPropertyName" content={relationShipMetadata.ReferencedEntityNavigationPropertyName} />
+                        <RelatedRecordTooltipListItem title="ReferencingEntity" content={relationShipMetadata.ReferencingEntity} />
+                        <RelatedRecordTooltipListItem title="ReferencingAttribute" content={relationShipMetadata.ReferencingAttribute} />
+                        <RelatedRecordTooltipListItem title="ReferencingEntityNavigationPropertyName" content={relationShipMetadata.ReferencingEntityNavigationPropertyName} />
+                        <Divider component="li" sx={{ my: 0.5, mb: 1 }} />
+                        <ListItem sx={sxTooltip}>
+                            <List
+                                subheader={
+                                    <Typography variant="body2">
+                                        <strong>CascadeConfiguration:</strong>
+                                    </Typography>
+                                }>
+                                <RelatedRecordTooltipListItem title="Archive" content={relationShipMetadata.CascadeConfiguration.Archive} />
+                                <RelatedRecordTooltipListItem title="Assign" content={relationShipMetadata.CascadeConfiguration.Assign} />
+                                <RelatedRecordTooltipListItem title="Delete" content={relationShipMetadata.CascadeConfiguration.Delete} />
+                                <RelatedRecordTooltipListItem title="Merge" content={relationShipMetadata.CascadeConfiguration.Merge} />
+                                <RelatedRecordTooltipListItem title="Reparent" content={relationShipMetadata.CascadeConfiguration.Reparent} />
+                                <RelatedRecordTooltipListItem title="RollupView" content={relationShipMetadata.CascadeConfiguration.RollupView} />
+                                <RelatedRecordTooltipListItem title="Share" content={relationShipMetadata.CascadeConfiguration.Share} />
+                                <RelatedRecordTooltipListItem title="Unshare" content={relationShipMetadata.CascadeConfiguration.Unshare} />
+                            </List>
+                        </ListItem>
+                    </>
+                );
+                break;
+        }
+    }, [relationShipMetadata]);
+
+    return (
+        <List
+            sx={{ p: "0px 16px" }}
+            subheader={
+                <Typography variant="button">
+                    <strong>{relationShipMetadata.SchemaName}</strong>
+                </Typography>
+            }>
+            <ListItem sx={{ ...sxTooltip, mt: 0.5 }}>
+                <ListItemText>
+                    <Typography variant="body2">
+                        <strong>IsCustomRelationship:</strong>{" "}
+                        <i>{String(relationShipMetadata.IsCustomRelationship)}</i>
+                    </Typography>
+                </ListItemText>
+            </ListItem>
+            <ListItem sx={sxTooltip}>
+                <ListItemText>
+                    <Typography variant="body2">
+                        <strong>IsValidForAdvancedFind:</strong>{" "}
+                        <i>{String(relationShipMetadata.IsValidForAdvancedFind)}</i>
+                    </Typography>
+                </ListItemText>
+            </ListItem>
+            {details}
+        </List>
+    );
+}
 
 export default RelatedRecordsProcess;

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { debugLog } from '../../global/common';
-import { RetrievePrimaryIdAttribute } from './RetrievePrimaryIdAttribute';
 
 export function RetrieveRecordsByPrimaryAttributeOrGuid(entityname: string, input: string | null, top: number = 50) {
 

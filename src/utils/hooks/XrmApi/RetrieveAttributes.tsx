@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { debugLog, isObjectEquals } from '../../global/common';
+import { debugLog } from '../../global/common';
 
 export function RetrieveAttributes(entityname: string, recordid: string | undefined, attributesList: string[]): [{ [key: string]: any }, boolean] {
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { debugLog } from '../../global/common';
-import { ActiveUser } from '../../types/ActiveUser';
-import { SecurityRole, TeamsSecurityRole } from '../../types/SecurityRole';
+import type { ActiveUser } from '../../types/ActiveUser';
+import type { SecurityRole, TeamsSecurityRole } from '../../types/SecurityRole';
 import { useDictionnary } from '../use/useDictionnary';
 
 

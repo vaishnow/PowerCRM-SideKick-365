@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { debugLog } from '../../global/common';
-import { SecurityRole } from '../../types/SecurityRole';
+import type { SecurityRole } from '../../types/SecurityRole';
 
 
 export function RetrieveSecurityRole(): [SecurityRole[], boolean] {

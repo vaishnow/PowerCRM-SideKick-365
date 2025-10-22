@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { debugLog } from '../../global/common';
-import { SolutionItem } from '../../types/SolutionItem';
+import type { SolutionItem } from '../../types/SolutionItem';
 
 export function RetrieveSolutions(): [SolutionItem[], boolean] {
 

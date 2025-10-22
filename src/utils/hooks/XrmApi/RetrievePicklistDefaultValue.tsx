@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { debugLog } from '../../global/common';
-import { OptionSetValue } from '../../types/OptionSetValue';
+import type { OptionSetValue } from '../../types/OptionSetValue';
 
 export function RetrievePicklistDefaultValue(entityname: string, fieldnames: string[]) {
 

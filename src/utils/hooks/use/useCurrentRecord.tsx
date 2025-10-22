@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { debugLog, formatId } from "../../global/common";
+
+import { formatId } from "../../global/common";
 import { useFormContextDocument } from "./useFormContextDocument";
 import { useXrmUpdated } from "./useXrmUpdated";
 
-
 export function useCurrentRecord() {
-
     const [isEntityRecord, setIsEntityRecord] = useState<boolean>(false);
     const [entityName, setEntityName] = useState<string | undefined>(undefined);
     const [recordId, setRecordId] = useState<string | undefined>(undefined);
@@ -17,9 +16,11 @@ export function useCurrentRecord() {
         setIsEntityRecord(!!entityName && !!recordId);
     }, [entityName, recordId]);
 
-    const getCurrentRecord = useCallback((): { entityname: string | undefined, recordid: string | undefined } => {
-        const entityname: string | undefined = formContext ? formContext.data?.entity?.getEntityName() : Xrm.Utility.getPageContext()?.input?.entityName;
-        const recordid: string | undefined = formatId(formContext?.data?.entity?.getId().toLowerCase() ?? '');
+    const getCurrentRecord = useCallback((): { entityname: string | undefined; recordid: string | undefined } => {
+        const entityname: string | undefined = formContext
+            ? formContext.data?.entity?.getEntityName()
+            : Xrm.Utility.getPageContext()?.input?.entityName;
+        const recordid: string | undefined = formatId(formContext?.data?.entity?.getId().toLowerCase() ?? "");
         return { entityname, recordid };
     }, [formContext]);
 
@@ -45,6 +46,6 @@ export function useCurrentRecord() {
         isEntityRecord,
         entityName,
         recordId,
-        forceRefresh,
+        forceRefresh
     };
 }
