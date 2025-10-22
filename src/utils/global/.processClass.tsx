@@ -1,11 +1,5 @@
-import HelpTwoToneIcon from "@mui/icons-material/HelpTwoTone";
-import { Box, Button, Divider, Stack, Typography } from "@mui/material";
-import Zoom from "@mui/material/Zoom";
-import { useSnackbar } from "notistack";
-import React, { useMemo } from "react";
+import React from "react";
 
-import TooltipInfo from "../components/TooltipInfo";
-import { useEffectOnce } from "../hooks/use/useEffectOnce";
 import { getBridgeEventName } from "./common";
 import { PROJECT_PREFIX } from "./var";
 

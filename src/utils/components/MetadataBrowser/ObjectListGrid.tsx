@@ -50,7 +50,6 @@ import React, {
     type ReactNode
 } from "react";
 import { useCopyToClipboard } from "usehooks-ts";
-import { v4 as uuidv4 } from "uuid/dist/index";
 
 import { noOperation } from "../../global/common";
 import ZoomSlider from "../ZoomSlider";
@@ -61,6 +60,7 @@ import {
     CustomNoRowsOverlay
 } from "./StyledDataGrid";
 import { PROJECT_PREFIX } from "~utils/global/var";
+import uuidv4 from "~utils/global/uuidGenerator";
 
 declare module "@mui/x-data-grid" {
     interface ToolbarPropsOverrides {

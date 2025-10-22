@@ -1,6 +1,6 @@
-import { FormContext } from "../types/FormContext";
-import { LookupValue } from "../types/LookupValue";
-import { AttributeMetadata, MSType, StringAttributeFormat } from "../types/requestsType";
+import type { FormContext } from "../types/FormContext";
+import type { LookupValue } from "../types/LookupValue";
+import { type AttributeMetadata, MSType, StringAttributeFormat } from "../types/requestsType";
 
 export const getRandomValue = async (formContext: FormContext , attribute: Xrm.Attributes.Attribute, metadata: AttributeMetadata) => {
     switch (metadata.MStype) {
