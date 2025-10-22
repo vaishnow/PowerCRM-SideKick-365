@@ -1,8 +1,13 @@
 import type { ReactNode } from 'react';
-import { SiHtml5, SiCss3, SiJavascript, SiTypescript, SiJson } from "react-icons/si";
-import { FcPicture, FcFile } from "react-icons/fc";
-import { FaChevronRight, FaChevronDown } from "react-icons/fa";
-import { AiFillFileText } from "react-icons/ai";
+import { SiHtml5 } from "@react-icons/all-files/si/SiHtml5";
+import { SiCss3 } from "@react-icons/all-files/si/SiCss3";
+import { SiJavascript } from "@react-icons/all-files/si/SiJavascript";
+import { SiTypescript } from "@react-icons/all-files/si/SiTypescript";
+import { SiJson } from "@react-icons/all-files/si/SiJson";
+import { FcPicture } from "@react-icons/all-files/fc/FcPicture";
+import { FaChevronRight } from "@react-icons/all-files/fa/FaChevronRight";
+import { FaChevronDown } from "@react-icons/all-files/fa/FaChevronDown";
+import { AiFillFileText } from "@react-icons/all-files/ai/AiFillFileText";
 
 function getIconHelper() {
     const cache = new Map<string, ReactNode>();

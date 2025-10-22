@@ -46,6 +46,9 @@ dependencies:
   '@mui/x-date-pickers':
     specifier: ^8.12.0
     version: 8.14.0(@emotion/react@11.14.0)(@emotion/styled@11.14.1)(@mui/material@7.3.4)(@mui/system@7.3.3)(@types/react@18.2.48)(dayjs@1.11.18)(react-dom@18.2.0)(react@18.2.0)
+  '@react-icons/all-files':
+    specifier: ^4.1.0
+    version: 4.1.0(react@18.2.0)
   '@uiw/react-json-view':
     specifier: 2.0.0-alpha.39
     version: 2.0.0-alpha.39(@babel/runtime@7.28.4)(react-dom@18.2.0)(react@18.2.0)
@@ -85,9 +88,6 @@ dependencies:
   react-hotkeys-hook:
     specifier: ^5.1.0
     version: 5.1.0(react-dom@18.2.0)(react@18.2.0)
-  react-icons:
-    specifier: ^5.5.0
-    version: 5.5.0(react@18.2.0)
   react-textfit:
     specifier: ^1.1.1
     version: 1.1.1(react-dom@18.2.0)(react@18.2.0)
@@ -3938,6 +3938,14 @@ packages:
     resolution: {integrity: sha512-P1st0aksCrn9sGZhp8GMYwBnQsbvAWsZAX44oXNNvLHGqAOcoVxmjZiohstwQ7SqKnbR47akdNi+uleWD8+g6A==}
     dev: false
 
+  /@react-icons/all-files@4.1.0(react@18.2.0):
+    resolution: {integrity: sha512-hxBI2UOuVaI3O/BhQfhtb4kcGn9ft12RWAFVMUeNjqqhLsHvFtzIkFaptBJpFDANTKoDfdVoHTKZDlwKCACbMQ==}
+    peerDependencies:
+      react: '*'
+    dependencies:
+      react: 18.2.0
+    dev: false
+
   /@sec-ant/readable-stream@0.4.1:
     resolution: {integrity: sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg==}
 
@@ -7147,14 +7155,6 @@ packages:
     dependencies:
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-    dev: false
-
-  /react-icons@5.5.0(react@18.2.0):
-    resolution: {integrity: sha512-MEFcXdkP3dLo8uumGI5xN3lDFNsRtrjbOEKDLD7yv76v4wpnEq2Lt2qeHaQOr34I/wPN3s3+N08WkQ+CW37Xiw==}
-    peerDependencies:
-      react: '*'
-    dependencies:
-      react: 18.2.0
     dev: false
 
   /react-is@16.13.1:

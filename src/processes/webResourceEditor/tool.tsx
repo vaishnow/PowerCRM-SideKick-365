@@ -1,11 +1,9 @@
 import type { SvgIconComponent } from "@mui/icons-material";
-import CodeIcon from "@mui/icons-material/Code";
 import GradeIcon from "@mui/icons-material/Grade";
 import GradeOutlinedIcon from "@mui/icons-material/GradeOutlined";
 import RestoreIcon from "@mui/icons-material/Restore";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
-import ButtonGroup from "@mui/material/ButtonGroup";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";

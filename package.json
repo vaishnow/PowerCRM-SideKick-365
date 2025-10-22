@@ -22,6 +22,7 @@
         "@mui/styles": "^6.4.8",
         "@mui/x-data-grid": "^7.24.0",
         "@mui/x-date-pickers": "^8.12.0",
+        "@react-icons/all-files": "^4.1.0",
         "@uiw/react-json-view": "2.0.0-alpha.39",
         "autonumeric": "^4.10.9",
         "clsx": "^2.1.1",
@@ -35,7 +36,6 @@
         "react": "18.2.0",
         "react-dom": "18.2.0",
         "react-hotkeys-hook": "^5.1.0",
-        "react-icons": "^5.5.0",
         "react-textfit": "^1.1.1",
         "react-virtuoso": "^4.14.1",
         "usehooks-ts": "^3.1.1"
