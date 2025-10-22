@@ -87,4 +87,3 @@ export const defaultToolList: StorageConfiguration[] = ToolPanelButtonList.map((
 // uuid module path wrong
 // related record more than 10Mo ????
 // allow to reduce main column
-// fix tooltip on main buttons

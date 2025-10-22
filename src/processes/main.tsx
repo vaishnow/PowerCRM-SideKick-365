@@ -22,6 +22,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import { type StorageConfiguration } from "~/utils/types/StorageConfiguration";
 import { WandMainIcon } from "~icons/WandMainIcon";
+import type { ToolPanelButton } from "~utils/global/.toolPanelButton";
 
 import packageJson from "../../package.json";
 import { KoFiIcon } from "../icons/BuyMeACoffee";
@@ -41,7 +42,6 @@ import {
 } from "../utils/global/var";
 import { MessageType } from "../utils/types/Message";
 import { defaultToolList, getToolButton } from "./buttonList";
-import type { ToolPanelButton } from "~utils/global/.toolPanelButton";
 
 export const MainScreen: React.FunctionComponent = () => {
     return (
@@ -263,7 +263,6 @@ const MainScreenCustomPanel: React.FunctionComponent = () => {
                     <Tooltip
                         title={<Typography variant="h6">{APPLICATION_NAME}</Typography>}
                         placement="left"
-                        arrow
                         disableInteractive>
                         <Button
                             key={`${MAIN_MENU_ID}-processButton`}
@@ -313,7 +312,6 @@ const MainScreenCustomPanel: React.FunctionComponent = () => {
                                                                 </Typography>
                                                             }
                                                             placement="left"
-                                                            arrow
                                                             disableInteractive>
                                                             <Button
                                                                 key={`${process.prefixedId}-processButton`}
@@ -546,14 +544,14 @@ function DrawerTool(props: DrawerToolProps) {
         },
         [setOpenedProcessesBadge, process]
     );
-    
+
     useEffect(() => {
         const eventName = getBridgeEventName(process.prefixedId);
 
         const callback = (e: Event) => {
             const { badgeContent } = (e as CustomEvent).detail;
             if (badgeContent) {
-                setBadgeInner(badgeContent)
+                setBadgeInner(badgeContent);
             }
         };
 
@@ -561,7 +559,6 @@ function DrawerTool(props: DrawerToolProps) {
 
         return () => window.removeEventListener(eventName, callback, false);
     }, [setBadgeInner]);
-
 
     const width = useMemo(() => {
         if (typeof process.width === "string") {
