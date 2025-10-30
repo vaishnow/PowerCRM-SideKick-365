@@ -338,7 +338,7 @@ const WebResourceEditor = forwardRef<ProcessRef, ProcessProps>(function WebResso
             getAllFiles(root).sort((file1, file2) => {
                 const isFile1Fav = favFiles.includes(file1.crmId) ? 1 : 0;
                 const isFile2Fav = favFiles.includes(file2.crmId) ? 1 : 0;
-                return isFile2Fav - isFile1Fav ;
+                return isFile2Fav - isFile1Fav;
             }),
         [favFiles, root]
     );
@@ -461,8 +461,8 @@ const WebResourceEditor = forwardRef<ProcessRef, ProcessProps>(function WebResso
                 )}
 
                 <CircularProgressOverflow loading={isFetching} disableShrink size={120} sx={{ minHeight: 0 }}>
-                    <Stack direction="column" height="100%" width="100%">
-                        <ScriptList
+                    <Stack direction="column" height="100%" width="100%" spacing={1}>
+                        {overridedFiles && overridedFiles.length > 0 && <ScriptList
                             text="Overrided scripts:"
                             items={overridedFiles}
                             primaryLabel={(item) => item.name}
@@ -472,7 +472,7 @@ const WebResourceEditor = forwardRef<ProcessRef, ProcessProps>(function WebResso
                             secondaryTitle="Restore file"
                             favFiles={favFiles}
                             toggleFavFile={toggleFavFile}
-                        />
+                        />}
                         <ScriptList
                             text="Scripts found on this page:"
                             items={allFiles || []}
@@ -482,6 +482,7 @@ const WebResourceEditor = forwardRef<ProcessRef, ProcessProps>(function WebResso
                             primaryAction={selectFile}
                             favFiles={favFiles}
                             toggleFavFile={toggleFavFile}
+                            isPrincipal
                         />
                     </Stack>
                 </CircularProgressOverflow>
@@ -547,6 +548,7 @@ type ScriptListProps = {
     secondaryTitle?: string;
     favFiles: string[];
     toggleFavFile: (value: string) => void;
+    isPrincipal?: boolean;
 };
 function ScriptList(props: ScriptListProps) {
     return (
@@ -556,8 +558,7 @@ function ScriptList(props: ScriptListProps) {
                 bgcolor: "background.paper",
                 overflowX: "hidden",
                 overflowY: "auto",
-                flex: "1 1 50%",
-                height: "100%"
+                ...(props.isPrincipal ? { minHeight: "50%", flex: "1 1 0" } : { maxHeight: "50%", flex: "none" })
             }}
             disablePadding
             subheader={
@@ -619,6 +620,5 @@ const Transition = forwardRef(function Transition(
 ) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
-
 
 export default WebResourceEditorProcess;

@@ -11,22 +11,12 @@ import ListSubheader from "@mui/material/ListSubheader";
 import Stack from "@mui/material/Stack";
 import Switch from "@mui/material/Switch";
 import Typography from "@mui/material/Typography";
-import React, {
-    forwardRef,
-    useCallback,
-    useEffect,
-    useMemo,
-    useState
-} from "react";
+import React, { forwardRef, useCallback, useEffect, useMemo, useState } from "react";
 import { useBoolean } from "usehooks-ts";
 
 import CopyMenu from "../../utils/components/CopyMenu";
 import DontShowInfo from "../../utils/components/DontShowInfo";
-import {
-    ProcessButton,
-    type ProcessProps,
-    type ProcessRef
-} from "../../utils/global/.processClass";
+import { ProcessButton, type ProcessProps, type ProcessRef } from "../../utils/global/.processClass";
 import { debugLog, isArraysEquals, setStyle } from "../../utils/global/common";
 import { useSpDevTools } from "../../utils/global/spContext";
 import { useCurrentRecord } from "../../utils/hooks/use/useCurrentRecord";
@@ -48,173 +38,125 @@ declare module "@mui/material/Divider" {
     }
 }
 
-const DirtyFieldsButtonProcess = forwardRef<ProcessRef, ProcessProps>(
-    function DirtyFieldsButtonProcess(props: ProcessProps, ref) {
-        const {
-            d365MainAndIframeUpdated: domUpdated,
-            formContext,
-            formDocument
-        } = useFormContextDocument();
+const DirtyFieldsButtonProcess = forwardRef<ProcessRef, ProcessProps>(function DirtyFieldsButtonProcess(
+    props: ProcessProps,
+    ref
+) {
+    const { d365MainAndIframeUpdated: domUpdated, formContext, formDocument } = useFormContextDocument();
 
-        const { isDebug } = useSpDevTools();
-        const { entityName, recordId } = useCurrentRecord();
+    const { isDebug } = useSpDevTools();
+    const { entityName, recordId } = useCurrentRecord();
 
-        const [attributes, isFetching] = RetrieveAllAttributes(
-            entityName ?? "",
-            recordId
-        );
-        const [dirtyAttributes, setDirtyAttributes] = useState<
-            Xrm.Attributes.Attribute[]
-        >([]);
+    const [attributes, isFetching] = RetrieveAllAttributes(entityName ?? "", recordId);
+    const [dirtyAttributes, setDirtyAttributes] = useState<Xrm.Attributes.Attribute[]>([]);
 
-        const { value: squareFormEnabled, toggle: toggleSquareFormEnabled } =
-            useBoolean(false);
+    const { value: squareFormEnabled, toggle: toggleSquareFormEnabled } = useBoolean(false);
 
-        useEffect(() => {
-            const currentDirty = formContext?.getAttribute((a) =>
-                a.getIsDirty()
+    const { toggle: toggleForceRefresh, value: forceRefresh } = useBoolean(false);
+
+    useEffect(() => {
+        const currentDirty = formContext?.getAttribute((a) => a.getIsDirty());
+        if (currentDirty && dirtyAttributes) {
+            const isUnchanged = isArraysEquals(
+                currentDirty.map((a) => a.getName()),
+                dirtyAttributes.map((a) => a.getName())
             );
-            if (currentDirty && dirtyAttributes) {
-                const isUnchanged = isArraysEquals(
-                    currentDirty.map((a) => a.getName()),
-                    dirtyAttributes.map((a) => a.getName())
-                );
-                if (!isUnchanged) {
-                    setDirtyAttributes(currentDirty);
-                }
+            if (!isUnchanged) {
+                setDirtyAttributes(currentDirty);
             }
+        }
 
-            // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [formContext, domUpdated]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [formContext, domUpdated, forceRefresh]);
 
-        useEffect(() => {
-            if (squareFormEnabled) {
-                const selector = dirtyAttributes
-                    ?.flatMap((attribute) =>
-                        attribute.controls
-                            .get()
-                            .map(
-                                (control) =>
-                                    `[data-control-name='${control.getName()}']>div`
-                            )
-                    )
-                    .join(",");
-                if (selector !== undefined) {
-                    setStyle(
-                        formDocument ?? document,
-                        "styleModifier-dirtyfields",
-                        {
-                            [selector]: [
-                                "outline: 2px dashed #ff2500",
-                                "outline-offset: -2px"
-                            ]
-                        }
-                    );
-                }
-            } else {
-                setStyle(
-                    formDocument ?? document,
-                    "styleModifier-dirtyfields",
-                    {}
-                );
+    useEffect(() => {
+        if (squareFormEnabled) {
+            const selector = dirtyAttributes
+                ?.flatMap((attribute) =>
+                    attribute.controls.get().map((control) => `[data-control-name='${control.getName()}']>div`)
+                )
+                .join(",");
+            if (selector !== undefined) {
+                setStyle(formDocument ?? document, "styleModifier-dirtyfields", {
+                    [selector]: ["outline: 2px dashed #ff2500", "outline-offset: -2px"]
+                });
             }
-        }, [dirtyAttributes, formDocument, squareFormEnabled]);
+        } else {
+            setStyle(formDocument ?? document, "styleModifier-dirtyfields", {});
+        }
+    }, [dirtyAttributes, formDocument, squareFormEnabled]);
 
-        useEffect(() => {
-            props.setBadge(dirtyAttributes.length || null);
-            // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [dirtyAttributes]);
+    useEffect(() => {
+        props.setBadge(dirtyAttributes.length || null);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dirtyAttributes]);
 
-        return (
-            <Stack height="calc(100% - 10px)" padding="10px">
-                <DontShowInfo storageName={`${props.id}-maininfo`}>
-                    <Typography variant="body2">
-                        You can click on an item to focus on the form's field.
-                    </Typography>
-                </DontShowInfo>
+    return (
+        <Stack height="calc(100% - 10px)" padding="10px">
+            <DontShowInfo storageName={`${props.id}-maininfo`}>
+                <Typography variant="body2">You can click on an item to focus on the form's field.</Typography>
+            </DontShowInfo>
 
-                <Stack
-                    spacing={4}
-                    alignItems="center"
-                    height="100%"
-                    sx={{ overflowY: "scroll", overflowX: "hidden" }}>
-                    <List
-                        sx={{
-                            width: "100%",
-                            bgcolor: "background.paper",
-                            overflowY: "auto"
-                        }}
-                        component="nav"
-                        subheader={
-                            <ListSubheader
-                                component="div"
-                                sx={{ lineHeight: "unset" }}>
-                                <Divider />
-                                <FormControl
-                                    component="fieldset"
-                                    variant="standard">
+            <Stack spacing={4} alignItems="center" height="100%" sx={{ overflowY: "scroll", overflowX: "hidden" }}>
+                <List
+                    sx={{
+                        width: "100%",
+                        bgcolor: "background.paper",
+                        overflowY: "auto"
+                    }}
+                    component="nav"
+                    subheader={
+                        <ListSubheader component="div" sx={{ lineHeight: "unset" }}>
+                            <Divider />
+                            <FormControl component="fieldset" variant="standard" fullWidth>
+                                <Stack direction="row" width="100%" justifyContent="space-between">
                                     <FormControlLabel
                                         control={
-                                            <Switch
-                                                checked={squareFormEnabled}
-                                                onClick={
-                                                    toggleSquareFormEnabled
-                                                }
-                                            />
+                                            <Switch checked={squareFormEnabled} onClick={toggleSquareFormEnabled} />
                                         }
                                         label="Display in form"
                                     />
-                                    {isDebug.value && (
-                                        <Button
-                                            onClick={() =>
-                                                debugLog(
-                                                    "DirtyFields retrieved attributes:",
-                                                    attributes
-                                                )
-                                            }>
-                                            Display Retrieved Attributes
-                                        </Button>
-                                    )}
-                                </FormControl>
-                                <Divider />
-                            </ListSubheader>
-                        }>
-                        {dirtyAttributes.map((attribute, index) => {
-                            const attributeName = attribute.getName();
-                            const attributeValue =
-                                getAttributeValueString(attribute);
-                            const oldAttributeSelector =
-                                attribute.getAttributeType() === "lookup"
-                                    ? `_${attributeName}_value`
-                                    : attributeName;
-                            return (
-                                <DirtyAttributeItem
-                                    key={attributeName + "dirty"}
-                                    currentFormContext={formContext}
-                                    name={attributeName}
-                                    oldValue={attributes[oldAttributeSelector]}
-                                    value={attributeValue}
-                                />
-                            );
-                        })}
-                    </List>
-                </Stack>
-                {isDebug.value && (
-                    <>
-                        <Divider />
-                        <Typography maxHeight="19px" variant="caption">
-                            {entityName + " / " + recordId}
-                        </Typography>
-                    </>
-                )}
+                                    <Button variant="outlined" onClick={toggleForceRefresh}>Refresh</Button>
+                                </Stack>
+                                {isDebug.value && (
+                                    <Button onClick={() => debugLog("DirtyFields retrieved attributes:", attributes)}>
+                                        Display Retrieved Attributes
+                                    </Button>
+                                )}
+                            </FormControl>
+                            <Divider />
+                        </ListSubheader>
+                    }>
+                    {dirtyAttributes.map((attribute, index) => {
+                        const attributeName = attribute.getName();
+                        const attributeValue = getAttributeValueString(attribute);
+                        const oldAttributeSelector =
+                            attribute.getAttributeType() === "lookup" ? `_${attributeName}_value` : attributeName;
+                        return (
+                            <DirtyAttributeItem
+                                key={attributeName + "dirty"}
+                                currentFormContext={formContext}
+                                name={attributeName}
+                                oldValue={attributes[oldAttributeSelector]}
+                                value={attributeValue}
+                            />
+                        );
+                    })}
+                </List>
             </Stack>
-        );
-    }
-);
+            {isDebug.value && (
+                <>
+                    <Divider />
+                    <Typography maxHeight="19px" variant="caption">
+                        {entityName + " / " + recordId}
+                    </Typography>
+                </>
+            )}
+        </Stack>
+    );
+});
 
-function getAttributeValueString(
-    attribute: Xrm.Attributes.Attribute<any>
-): string | null {
+function getAttributeValueString(attribute: Xrm.Attributes.Attribute<any>): string | null {
     switch (attribute.getAttributeType()) {
         case "boolean":
         case "decimal":
@@ -230,16 +172,11 @@ function getAttributeValueString(
             if (!attribute.getValue() || attribute.getValue()?.length === 0) {
                 return null;
             } else if (attribute.getValue()?.length === 1) {
-                return attribute
-                    .getValue()[0]
-                    .id.replace("{", "")
-                    .replace("}", "");
+                return attribute.getValue()[0].id.replace("{", "").replace("}", "");
             }
             return `[${attribute
                 .getValue()
-                .map((value: any) =>
-                    value?.id.replace("{", "").replace("}", "")
-                )
+                .map((value: any) => value?.id.replace("{", "").replace("}", ""))
                 .join(", ")}]`;
 
         case "datetime":
@@ -260,10 +197,7 @@ const DirtyAttributeItem = React.memo((props: DirtyAttributeItemProps) => {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
     const handleClick = useCallback(() => {
-        currentFormContext
-            ?.getAttribute<Xrm.Attributes.Attribute>(name)
-            ?.controls.get(0)
-            ?.setFocus?.();
+        currentFormContext?.getAttribute<Xrm.Attributes.Attribute>(name)?.controls.get(0)?.setFocus?.();
     }, [currentFormContext, name]);
 
     const handleOpenContextualMenu = useCallback(
@@ -288,27 +222,18 @@ const DirtyAttributeItem = React.memo((props: DirtyAttributeItemProps) => {
 
     return (
         <ListItem key={"dirtyField" + name} sx={{ p: 0 }}>
-            <ListItemButton
-                onClick={handleClick}
-                onContextMenu={handleOpenContextualMenu}>
+            <ListItemButton onClick={handleClick} onContextMenu={handleOpenContextualMenu}>
                 <ListItemText
                     primary={name}
                     secondary={
                         <>
                             <ValueDisplay title="New Value" value={value} />
-                            <ValueDisplay
-                                title="Previous Value"
-                                value={oldValue}
-                            />
+                            <ValueDisplay title="Previous Value" value={oldValue} />
                         </>
                     }
                 />
             </ListItemButton>
-            <CopyMenu
-                anchorElement={anchorEl}
-                onClose={handleCloseContextualMenu}
-                items={copyContent}
-            />
+            <CopyMenu anchorElement={anchorEl} onClose={handleCloseContextualMenu} items={copyContent} />
             <Divider />
         </ListItem>
     );
@@ -321,17 +246,9 @@ interface ValueDisplayProps {
 function ValueDisplay(props: ValueDisplayProps) {
     return (
         <Typography component="p" variant="caption" color="text.secondary">
-            {props.title}:
-            <Typography
-                sx={{ display: "inline", ml: 1 }}
-                component="p"
-                variant="body2"
-                color="text.primary">
-                {props.value !== null && props.value !== undefined ? (
-                    props.value
-                ) : (
-                    <i>null</i>
-                )}
+            {props.title ?? "No title"}:
+            <Typography sx={{ display: "inline", ml: 1 }} component="span" variant="body2" color="text.primary">
+                {props.value !== null && props.value !== undefined ? props.value : <i>null</i>}
             </Typography>
         </Typography>
     );

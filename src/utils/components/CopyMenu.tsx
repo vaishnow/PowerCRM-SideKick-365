@@ -30,7 +30,7 @@ function CopyMenu(props: CopyMenuProps) {
                     items.map(item => {
                         if (item.content !== undefined) {
                             return (
-                                <MenuItem onClick={() => handleOnClick(item.content)}>Copy {item.title}</MenuItem>
+                                <MenuItem key={`copyMenu${item.title}`} onClick={() => handleOnClick(item.content)}>Copy {item.title}</MenuItem>
                             );
                         }
                         else {
