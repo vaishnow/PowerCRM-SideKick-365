@@ -81,5 +81,3 @@ export const defaultToolList: StorageConfiguration[] = ToolPanelButtonList.map((
 //? formtool: label not displayed in sub form (lookup control)
 //? options: add version to option
 //? configuration: add delay option
-// force refresh dirtyfields
-// impersonation refresh list
