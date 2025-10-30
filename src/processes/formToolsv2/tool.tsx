@@ -1,4 +1,3 @@
-import HandymanIcon from "@mui/icons-material/Handyman";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import LabelIcon from "@mui/icons-material/Label";
 import LabelOutlinedIcon from "@mui/icons-material/LabelOutlined";

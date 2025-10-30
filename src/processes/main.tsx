@@ -1,8 +1,10 @@
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import BugReportIcon from "@mui/icons-material/BugReport";
 import CloseIcon from "@mui/icons-material/Close";
 import ExtensionIcon from "@mui/icons-material/Extension";
 import GitHubIcon from "@mui/icons-material/GitHub";
+import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import StarIcon from "@mui/icons-material/Star";
 import {
     Badge,
@@ -66,6 +68,8 @@ const DRAWER_BUTTON_CONTAINER_WIDTH = 47;
 const MAIN_MENU_WIDTH = 322;
 
 const MainScreenCustomPanel: React.FunctionComponent = () => {
+    const [isMainDrawerOpened, setIsMainDrawerOpened] = useState<boolean>(true);
+
     const [panelOpenedId, setPanelOpenedId] = useState<string | null>(null);
 
     const [processesList, setProcessesList] = useState<StorageConfiguration[]>([]);
@@ -109,12 +113,14 @@ const MainScreenCustomPanel: React.FunctionComponent = () => {
 
     useEffect(() => {
         const setPageStyle = async () => {
+            let drawerButtonWidth = isMainDrawerOpened ? DRAWER_BUTTON_CONTAINER_WIDTH : 0;
+
             setStyle(document, "drawerbuttonsmain", {
-                "#shell-container": [`width: calc(100% - ${DRAWER_BUTTON_CONTAINER_WIDTH}px)`]
+                "#shell-container": [`width: calc(100% - ${drawerButtonWidth}px)`]
             });
 
             let dynamicsmainscreenWidth = 0;
-            if (!isForegroundPanes && panelOpenedId !== null) {
+            if (!isForegroundPanes && panelOpenedId !== null && isMainDrawerOpened) {
                 if (panelOpenedId !== MAIN_MENU_ID && openedProcesses[panelOpenedId].widthNumber > 0) {
                     dynamicsmainscreenWidth = openedProcesses[panelOpenedId].widthNumber;
                 } else {
@@ -124,16 +130,14 @@ const MainScreenCustomPanel: React.FunctionComponent = () => {
             setStyle(document, "resizedynamicsmainscreen", {
                 "#ApplicationShell > *:not(*:first-child)": [`width: calc(100% - ${dynamicsmainscreenWidth}px)`],
                 // "#mainContent > *:first-child": [`width: calc(100% - ${dynamicsmainscreenWidth}px)`],
-                "[id^=DialogContainer]": [
-                    `width: calc(100% - ${DRAWER_BUTTON_CONTAINER_WIDTH}px - ${dynamicsmainscreenWidth}px)`
-                ],
+                "[id^=DialogContainer]": [`width: calc(100% - ${drawerButtonWidth}px - ${dynamicsmainscreenWidth}px)`],
                 "[id*=__flyoutRootNode] > div > div": ["z-index: 1200"]
             });
         };
 
         setPageStyle();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [panelOpenedId, isForegroundPanes]);
+    }, [panelOpenedId, isForegroundPanes, isMainDrawerOpened]);
 
     useEffect(() => {
         if (panelOpenedId && openedProcesses[panelOpenedId] && !openedProcesses[panelOpenedId].isPanelProcess) {
@@ -246,6 +250,7 @@ const MainScreenCustomPanel: React.FunctionComponent = () => {
     return (
         <>
             <Drawer
+                open={isMainDrawerOpened}
                 anchor={"right"}
                 hideBackdrop
                 sx={{
@@ -255,110 +260,125 @@ const MainScreenCustomPanel: React.FunctionComponent = () => {
                 PaperProps={{
                     sx: {
                         width: DRAWER_BUTTON_CONTAINER_WIDTH,
-                        backgroundColor: "rgb(246,247,248)"
+                        bgcolor: "background.paper"
+                        // backgroundColor: "rgb(246,247,248)"
                     }
                 }}
-                variant="permanent">
-                <Stack direction="column">
-                    <Tooltip
-                        title={<Typography variant="h6">{APPLICATION_NAME}</Typography>}
-                        placement="left"
-                        disableInteractive>
-                        <Button
-                            key={`${MAIN_MENU_ID}-processButton`}
-                            onClick={() => togglePanelDrawer(MAIN_MENU_ID)}
-                            sx={{
-                                minWidth: "unset",
-                                aspectRatio: "1 / 1",
-                                borderRadius: 0,
-                                boxShadow: "unset"
-                            }}>
-                            <WandMainIcon sx={{ fontSize: 25 }} />
-                        </Button>
-                    </Tooltip>
+                variant="persistent">
+                <Stack direction="column" justifyContent="space-between" height="100%" pb={6}>
+                    <Stack direction="column">
+                        <Tooltip
+                            title={<Typography variant="h6">{APPLICATION_NAME}</Typography>}
+                            placement="left"
+                            disableInteractive>
+                            <Button
+                                key={`${MAIN_MENU_ID}-processButton`}
+                                onClick={() => togglePanelDrawer(MAIN_MENU_ID)}
+                                sx={{
+                                    minWidth: "unset",
+                                    aspectRatio: "1 / 1",
+                                    borderRadius: 0,
+                                    boxShadow: "unset"
+                                }}>
+                                <WandMainIcon sx={{ fontSize: 25 }} />
+                            </Button>
+                        </Tooltip>
 
-                    <Divider />
+                        <Divider />
 
-                    <DragDropContext onDragEnd={onDragEnd}>
-                        <Droppable droppableId={MAIN_MENU_ID + "droppable"} key={MAIN_MENU_ID + "droppable"}>
-                            {(providerDroppable) => (
-                                <Stack
-                                    direction="column"
-                                    ref={providerDroppable.innerRef}
-                                    {...providerDroppable.droppableProps}>
-                                    {Object.values(openedProcesses).map((process, index) => {
-                                        const badgeValue = openedProcessesBadge[process.prefixedId];
-                                        const hasBadge = badgeValue !== null;
+                        <DragDropContext onDragEnd={onDragEnd}>
+                            <Droppable droppableId={MAIN_MENU_ID + "droppable"} key={MAIN_MENU_ID + "droppable"}>
+                                {(providerDroppable) => (
+                                    <Stack
+                                        direction="column"
+                                        ref={providerDroppable.innerRef}
+                                        {...providerDroppable.droppableProps}>
+                                        {Object.values(openedProcesses).map((process, index) => {
+                                            const badgeValue = openedProcessesBadge[process.prefixedId];
+                                            const hasBadge = badgeValue !== null;
 
-                                        return (
-                                            <Draggable
-                                                draggableId={process.prefixedId}
-                                                index={index}
-                                                key={process.prefixedId + "draggable"}>
-                                                {(providerDraggable) => (
-                                                    <Box
-                                                        key={process.prefixedId + "-maincontentbox"}
-                                                        ref={providerDraggable.innerRef}
-                                                        {...providerDraggable.draggableProps}
-                                                        {...providerDraggable.dragHandleProps}
-                                                        width="100%"
-                                                        sx={{
-                                                            aspectRatio: "1/1"
-                                                        }}>
-                                                        <Tooltip
-                                                            title={
-                                                                <Typography variant="h6">
-                                                                    {process.panelButtonName}
-                                                                </Typography>
-                                                            }
-                                                            placement="left"
-                                                            disableInteractive>
-                                                            <Button
-                                                                key={`${process.prefixedId}-processButton`}
-                                                                variant={
-                                                                    panelOpenedId === process.prefixedId
-                                                                        ? "contained"
-                                                                        : "text"
+                                            return (
+                                                <Draggable
+                                                    draggableId={process.prefixedId}
+                                                    index={index}
+                                                    key={process.prefixedId + "draggable"}>
+                                                    {(providerDraggable) => (
+                                                        <Box
+                                                            key={process.prefixedId + "-maincontentbox"}
+                                                            ref={providerDraggable.innerRef}
+                                                            {...providerDraggable.draggableProps}
+                                                            {...providerDraggable.dragHandleProps}
+                                                            width="100%"
+                                                            sx={{
+                                                                aspectRatio: "1/1"
+                                                            }}>
+                                                            <Tooltip
+                                                                title={
+                                                                    <Typography variant="h6">
+                                                                        {process.panelButtonName}
+                                                                    </Typography>
                                                                 }
-                                                                onClick={() => togglePanelDrawer(process.prefixedId)}
-                                                                fullWidth
-                                                                sx={{
-                                                                    minWidth: "unset",
-                                                                    aspectRatio: "1 / 1",
-                                                                    borderRadius: 0,
-                                                                    boxShadow: "unset",
-                                                                    color:
+                                                                placement="left"
+                                                                disableInteractive>
+                                                                <Button
+                                                                    key={`${process.prefixedId}-processButton`}
+                                                                    variant={
                                                                         panelOpenedId === process.prefixedId
-                                                                            ? "white"
-                                                                            : "black"
-                                                                }}>
-                                                                {hasBadge ? (
-                                                                    <Badge
-                                                                        badgeContent={badgeValue}
-                                                                        color="info"
-                                                                        sx={(theme) => ({
-                                                                            [`& .${PROJECT_PREFIX}Badge-badge`]: {
-                                                                                aspectRatio: "1 / 1",
-                                                                                border: `2px solid ${theme.palette.background.paper}`
-                                                                            }
-                                                                        })}>
-                                                                        {process.panelButtonIcon}
-                                                                    </Badge>
-                                                                ) : (
-                                                                    process.panelButtonIcon
-                                                                )}
-                                                            </Button>
-                                                        </Tooltip>
-                                                    </Box>
-                                                )}
-                                            </Draggable>
-                                        );
-                                    })}
-                                    {providerDroppable.placeholder}
-                                </Stack>
-                            )}
-                        </Droppable>
-                    </DragDropContext>
+                                                                            ? "contained"
+                                                                            : "text"
+                                                                    }
+                                                                    onClick={() =>
+                                                                        togglePanelDrawer(process.prefixedId)
+                                                                    }
+                                                                    fullWidth
+                                                                    sx={{
+                                                                        minWidth: "unset",
+                                                                        aspectRatio: "1 / 1",
+                                                                        borderRadius: 0,
+                                                                        boxShadow: "unset",
+                                                                        color:
+                                                                            panelOpenedId === process.prefixedId
+                                                                                ? "white"
+                                                                                : "black"
+                                                                    }}>
+                                                                    {hasBadge ? (
+                                                                        <Badge
+                                                                            badgeContent={badgeValue}
+                                                                            color="info"
+                                                                            sx={(theme) => ({
+                                                                                [`& .${PROJECT_PREFIX}Badge-badge`]: {
+                                                                                    aspectRatio: "1 / 1",
+                                                                                    border: `2px solid ${theme.palette.background.paper}`
+                                                                                }
+                                                                            })}>
+                                                                            {process.panelButtonIcon}
+                                                                        </Badge>
+                                                                    ) : (
+                                                                        process.panelButtonIcon
+                                                                    )}
+                                                                </Button>
+                                                            </Tooltip>
+                                                        </Box>
+                                                    )}
+                                                </Draggable>
+                                            );
+                                        })}
+                                        {providerDroppable.placeholder}
+                                    </Stack>
+                                )}
+                            </Droppable>
+                        </DragDropContext>
+                    </Stack>
+                    <Typography
+                        sx={{
+                            writingMode: "vertical-rl",
+                            px: 1,
+                            color: "silver",
+                            userSelect: "none",
+                            cursor: "default"
+                        }}>
+                        Hide <ArrowDownwardIcon />
+                    </Typography>
                 </Stack>
             </Drawer>
 
@@ -403,12 +423,34 @@ const MainScreenCustomPanel: React.FunctionComponent = () => {
                         <DrawerTool
                             key={`${process.prefixedId}-drawertool`}
                             closeProcess={closeProcess}
-                            panelOpenedId={panelOpenedId}
+                            panelOpenedId={isMainDrawerOpened ? panelOpenedId : null}
                             process={process}
                             setOpenedProcessesBadge={setOpenedProcessesBadge}
                         />
                     );
                 })}
+
+            <Box position={"static"}>
+                <Tooltip placement="left" title={<Typography variant="caption">{isMainDrawerOpened ? "Hide" : "Show"} toolbar and panels</Typography>}>
+                <Button
+                    onClick={() => setIsMainDrawerOpened((prev) => !prev)}
+                    sx={{
+                        position: "fixed",
+                        bgcolor: "background.paper",
+                        borderRadius: "20px 0 0 20px",
+                        bottom: 10,
+                        right: 0,
+                        minWidth: 0,
+                        width: DRAWER_BUTTON_CONTAINER_WIDTH * 0.8,
+                        height: DRAWER_BUTTON_CONTAINER_WIDTH * 0.8,
+                        zIndex: 100000
+                    }}>
+                    <KeyboardArrowRightIcon
+                        sx={{ transition: "transform 0.3s ease-in-out", transform: isMainDrawerOpened ? "scaleX(1)" : "scaleX(-1)" }}
+                    />
+                </Button>
+                </Tooltip>
+            </Box>
         </>
     );
 };

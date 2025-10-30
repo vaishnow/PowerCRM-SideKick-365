@@ -83,6 +83,4 @@ export const defaultToolList: StorageConfiguration[] = ToolPanelButtonList.map((
 //? configuration: add delay option
 // force refresh webressource
 // force refresh dirtyfields
-
-// uuid module path wrong
-// allow to reduce main column
+// impersonation refresh list
