@@ -4,9 +4,7 @@ import { createRoot } from "react-dom/client";
 
 import { MainScreen } from "~processes/main";
 import { ProcessButton } from "~utils/global/.processClass";
-import { waitForElm } from "~utils/global/common";
 import { DRAWER_CONTAINER_ID, MESSAGE_SOURCE_Content, PROJECT_PREFIX } from "~utils/global/var";
-import XrmObserver from "~utils/global/XrmObserver";
 
 export const config: PlasmoCSConfig = {
     matches: ["*://*/*"],
@@ -57,40 +55,6 @@ export const render: PlasmoRender<PlasmoCSUIJSXContainer> = async ({
     });
     root.render(<MainScreen />);
 };
-
-const fileName = "d365-sidekick";
-
-// function initExtension() {
-//     waitForElm(document, "#mainContent", { infiniteWait: true }).then((mainNode) => {
-//         const drawerContainer = document.createElement("div");
-//         drawerContainer.setAttribute("id", ProcessButton.prefixId + DRAWER_CONTAINER_ID);
-//         mainNode?.append(drawerContainer);
-
-//         const root = createRoot(drawerContainer, {
-//             identifierPrefix: ProcessButton.prefixId
-//         });
-//         root.render(<MainScreen />);
-//     });
-
-//     new XrmObserver();
-// }
-
-// setTimeout(async () => {
-//     const isCRMD365 = Array.from(document.scripts).some((script) =>
-//         searchedScripts.some((src) => script.src.indexOf(src) !== -1)
-//     );
-//     console.log("This page is CRM:", isCRMD365);
-//     if (isCRMD365) {
-//         if (window.top && window.top.window === window) {
-//             var loading = setInterval(() => {
-//                 if (!!window.top.Xrm) {
-//                     clearInterval(loading);
-//                     initExtension();
-//                 }
-//             }, 1000);
-//         }
-//     }
-// }, 2000);
 
 ClassNameGenerator.configure((componentName) => `${PROJECT_PREFIX}${componentName.replace("Mui", "")}`);
 

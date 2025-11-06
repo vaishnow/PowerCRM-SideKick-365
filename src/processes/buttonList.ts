@@ -16,9 +16,6 @@ import createConfiguration from "./setConfiguration/button";
 import updateRecord from "./updateRecord/button";
 import webResourceEditor from "./webResourceEditor/button";
 
-// import ExtensionTarget from '../utils/types/ExtensionTarget';
-
-// const TARGET = process.env.REACT_APP_TARGET;
 
 export const ToolPanelButtonList: ToolPanelButton[] = [
     new formToolsV2(),

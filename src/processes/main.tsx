@@ -382,7 +382,7 @@ const MainScreenCustomPanel: React.FunctionComponent = () => {
                 </Stack>
             </Drawer>
 
-            <PanelDrawerItem width={MAIN_MENU_WIDTH} open={panelOpenedId === MAIN_MENU_ID}>
+            <PanelDrawerItem width={MAIN_MENU_WIDTH} open={isMainDrawerOpened && panelOpenedId === MAIN_MENU_ID}>
                 <>
                     <Typography variant="h5" padding={"15px 15px 5px 15px"} sx={{ userSelect: "none" }}>
                         {APPLICATION_NAME}
@@ -431,7 +431,7 @@ const MainScreenCustomPanel: React.FunctionComponent = () => {
                 })}
 
             <Box position={"static"}>
-                <Tooltip placement="left" title={<Typography variant="caption">{isMainDrawerOpened ? "Hide" : "Show"} toolbar and panels</Typography>}>
+                <Tooltip placement="left" title={<Typography variant="caption">{isMainDrawerOpened ? "Hide" : "Show"} {APPLICATION_NAME} toolbar and panels</Typography>}>
                 <Button
                     onClick={() => setIsMainDrawerOpened((prev) => !prev)}
                     sx={{

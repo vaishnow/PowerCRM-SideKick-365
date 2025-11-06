@@ -3,7 +3,8 @@ import type { PlasmoCSConfig } from "plasmo";
 import { MESSAGE_SOURCE_Content, MESSAGE_SOURCE_WebPage, PROJECT_PREFIX } from "~utils/global/var";
 
 export const config: PlasmoCSConfig = {
-    matches: ["*://*/*"]
+    matches: ["*://*/*"],
+    run_at:"document_start"
 };
 
 const searchedScripts = ["/uclient/scripts/cdnEndpointCheck.js", "/uclient/scripts/MicrosoftAjax.js"];
@@ -31,18 +32,6 @@ function setListener() {
         });
     });
 
+    console.log("Launch message", `${PROJECT_PREFIX}messageListenerReady`)
     window.postMessage({ type: `${PROJECT_PREFIX}messageListenerReady`, source: MESSAGE_SOURCE_Content }, "*");
 }
-
-// function SaveData(data: string, id: string): void {
-//     var existingNode = document.querySelector("#" + id);
-//     if (existingNode) {
-//         console.log("Node " + id + " removed");
-//         existingNode.parentElement?.removeChild(existingNode);
-//     }
-//     var imageElement = document.createElement("saving");
-//     imageElement.setAttribute("data", data);
-//     imageElement.setAttribute("style", "display:none;");
-//     imageElement.setAttribute("id", id);
-//     document.body.appendChild(imageElement);
-// }

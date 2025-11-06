@@ -3,10 +3,9 @@ import type { OverridableStringUnion } from '@mui/types';
 import { Button } from '@mui/material';
 import { MessageType } from '../types/Message';
 import MessageManager from '../global/MessageManager';
-import ExtensionTarget from '../types/ExtensionTarget';
+// import ExtensionTarget from '../types/ExtensionTarget';
+import { isFirefox } from '~utils/global/var';
 
-
-const TARGET = process.env.REACT_APP_TARGET;
 
 export type OpenOptionsButtonProps = {
     text?: string | null;
@@ -17,7 +16,7 @@ function OpenOptionsButton(props: OpenOptionsButtonProps) {
     const { text, variant } = props;
 
     return (
-        TARGET === ExtensionTarget.Firefox ? null :
+        isFirefox ? null :
             <Button variant={variant} onClick={() => {
                 MessageManager.sendMessage(MessageType.OPENOPTIONS);
             }}>
