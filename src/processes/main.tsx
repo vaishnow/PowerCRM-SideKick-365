@@ -32,7 +32,7 @@ import BlackWhiteIconButton from "../utils/components/BlackWhiteIconButton";
 import DetailsSnackbar from "../utils/components/DetailsSnackbar";
 import OpenOptionsButton from "../utils/components/OpenOptionsButton";
 import PanelDrawerItem from "../utils/components/PanelDrawer/PanelDrawerItem";
-import { debugLog, getBridgeEventName, isArraysEquals, setStyle } from "../utils/global/common";
+import { debugLog, getBridgeEventName, GetExtensionId, isArraysEquals, setStyle } from "../utils/global/common";
 import MessageManager from "../utils/global/MessageManager";
 import SpDevToolsContextProvider, { useSpDevTools } from "../utils/global/spContext";
 import {
@@ -464,6 +464,8 @@ function MainScreenFooter() {
     const { enqueueSnackbar } = useSnackbar();
     const { isDebug } = useSpDevTools();
 
+    const extensionId = GetExtensionId();
+
     const handleHiddenAction = useCallback(() => {
         clickCount++;
 
@@ -492,9 +494,11 @@ function MainScreenFooter() {
     const reviewUrl = useMemo(() => {
         switch (navigatorType) {
             case "Edge":
-                return "https://microsoftedge.microsoft.com/addons/detail/d365-sidepanel-dev-tools/peineehbfebfgjbimbiomckmkkdbcpcg";
+                return `https://microsoftedge.microsoft.com/addons/detail/d365-sidepanel-dev-tools/${extensionId}`;
             case "Chrome":
-                return "https://chromewebstore.google.com/detail/d365-sidepanel-dev-tools/cbcpebonnklbnemkgkmofpkebonjifff/reviews";
+                return `https://chromewebstore.google.com/detail/d365-sidepanel-dev-tools/${extensionId}/reviews`;
+            case "Firefox":
+                return "https://addons.mozilla.org/en-US/firefox/addon/powercrm-sidekick-365/";
             default:
                 return "";
         }
@@ -530,7 +534,7 @@ function MainScreenFooter() {
                         </a>
                     </Tooltip> */}
                     <Tooltip title={<Typography>Github project</Typography>} arrow disableInteractive>
-                        <a href="https://github.com/Chisyeuf/d365-sidepanel-dev-tools" target="_blank" rel="noreferrer">
+                        <a href="https://github.com/SofianeGUEZZAR/PowerCRM-SideKick-365" target="_blank" rel="noreferrer">
                             <BlackWhiteIconButton size="small" color="#2dba4e">
                                 <GitHubIcon fontSize="inherit" />
                             </BlackWhiteIconButton>
@@ -538,7 +542,7 @@ function MainScreenFooter() {
                     </Tooltip>
                     <Tooltip title={<Typography>Report an issue</Typography>} arrow disableInteractive>
                         <a
-                            href="https://github.com/Chisyeuf/d365-sidepanel-dev-tools/issues/new"
+                            href="https://github.com/SofianeGUEZZAR/PowerCRM-SideKick-365/issues/new"
                             target="_blank"
                             rel="noreferrer">
                             <BlackWhiteIconButton size="small" color="#df5050">

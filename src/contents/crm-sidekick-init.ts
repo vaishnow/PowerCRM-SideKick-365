@@ -1,10 +1,10 @@
 import type { PlasmoCSConfig } from "plasmo";
 
-import { MESSAGE_SOURCE_Content, MESSAGE_SOURCE_WebPage, PROJECT_PREFIX } from "~utils/global/var";
+import { EXTENSION_STORAGE_SUFFIX, MESSAGE_SOURCE_Content, MESSAGE_SOURCE_WebPage, PROJECT_PREFIX } from "~utils/global/var";
 
 export const config: PlasmoCSConfig = {
     matches: ["*://*/*"],
-    run_at:"document_start"
+    run_at: "document_start"
 };
 
 const searchedScripts = ["/uclient/scripts/cdnEndpointCheck.js", "/uclient/scripts/MicrosoftAjax.js"];
@@ -16,9 +16,16 @@ window.onload = async () => {
     console.log("This page is CRM:", isCRMD365);
     if (isCRMD365) {
         // SaveData(chrome.runtime.getURL(""), "extensionUrl");
+        storeExtensionId();
         setListener();
     }
 };
+
+function storeExtensionId() {
+    const id =
+        chrome.runtime?.id ?? (chrome.runtime?.getURL ? new URL(chrome.runtime.getURL("")).host : "");
+    document.documentElement.setAttribute(PROJECT_PREFIX + EXTENSION_STORAGE_SUFFIX, id);
+}
 
 function setListener() {
     window.addEventListener("message", (event) => {
@@ -32,6 +39,5 @@ function setListener() {
         });
     });
 
-    console.log("Launch message", `${PROJECT_PREFIX}messageListenerReady`)
     window.postMessage({ type: `${PROJECT_PREFIX}messageListenerReady`, source: MESSAGE_SOURCE_Content }, "*");
 }

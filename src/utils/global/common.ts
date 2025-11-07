@@ -1,5 +1,4 @@
-import { BRIDGE_SUFFIX, Env } from './var';
-
+import { BRIDGE_SUFFIX, Env, EXTENSION_STORAGE_SUFFIX, PROJECT_PREFIX } from "./var";
 
 export function setStyle(_document: Document, stylesheetid: string, style: { [querySelector: string]: string[] }) {
     var styleNode = _document.querySelector<HTMLStyleElement>("#" + stylesheetid);
@@ -8,7 +7,7 @@ export function setStyle(_document: Document, stylesheetid: string, style: { [qu
         styleNode.id = stylesheetid;
         _document.head.appendChild(styleNode);
     }
-    let styleText = '';
+    let styleText = "";
     for (var key in style) {
         var value = style[key];
         var styleElementsText = "";
@@ -21,7 +20,11 @@ export function setStyle(_document: Document, stylesheetid: string, style: { [qu
     styleNode.innerText = styleText;
 }
 
-export function waitForElm<T extends HTMLElement>(_document: Document, selector: string, options: { infiniteWait?: boolean, waitingTime?: number, signal?: AbortSignal } = {}) {
+export function waitForElm<T extends HTMLElement>(
+    _document: Document,
+    selector: string,
+    options: { infiniteWait?: boolean; waitingTime?: number; signal?: AbortSignal } = {}
+) {
     return new Promise<T | null>((resolve, reject) => {
         const { infiniteWait = false, waitingTime = 4000, signal } = options;
 
@@ -35,7 +38,7 @@ export function waitForElm<T extends HTMLElement>(_document: Document, selector:
         }
 
         let timeout: NodeJS.Timeout;
-        const observer = new MutationObserver(mutations => {
+        const observer = new MutationObserver((mutations) => {
             if (signal?.aborted) {
                 observer.disconnect();
                 return reject(new DOMException(`waitForElm ${selector} - Aborted after mutation`));
@@ -49,7 +52,12 @@ export function waitForElm<T extends HTMLElement>(_document: Document, selector:
 
         if (!infiniteWait) {
             timeout = setTimeout(() => {
-                console.warn("SidePanel Tools - waitForElm: the DOM element", selector, "is not found on document", _document);
+                console.warn(
+                    "SidePanel Tools - waitForElm: the DOM element",
+                    selector,
+                    "is not found on document",
+                    _document
+                );
                 observer.disconnect();
                 resolve(null);
             }, waitingTime);
@@ -69,12 +77,12 @@ export function waitForElm<T extends HTMLElement>(_document: Document, selector:
 }
 
 export function waitForElmList<T extends HTMLElement>(selector: string) {
-    return new Promise<NodeListOf<T> | null>(resolve => {
+    return new Promise<NodeListOf<T> | null>((resolve) => {
         if (document.querySelectorAll(selector).length > 0) {
             return resolve(document.querySelectorAll<T>(selector));
         }
 
-        const observer = new MutationObserver(mutations => {
+        const observer = new MutationObserver((mutations) => {
             if (document.querySelectorAll(selector).length > 0) {
                 resolve(document.querySelectorAll<T>(selector));
                 observer.disconnect();
@@ -93,10 +101,10 @@ export function waitForElmList<T extends HTMLElement>(selector: string) {
 //     return data?.getAttribute("data") ?? '';
 // }
 
-// export function GetExtensionId(): string {
-//     var extensionUrl = GetData("extensionUrl");
-//     return extensionUrl.split('/')[2];
-// }
+export function GetExtensionId(): string {
+    const extensionId = document.documentElement.getAttribute(PROJECT_PREFIX + EXTENSION_STORAGE_SUFFIX);
+    return extensionId;
+}
 
 // export function GetUrl(url: string): string {
 //     var extensionUrl = GetData("extensionUrl");
@@ -104,7 +112,7 @@ export function waitForElmList<T extends HTMLElement>(selector: string) {
 // }
 
 export function formatId(guid: string) {
-    return guid?.replace('{', '').replace('}', '');
+    return guid?.replace("{", "").replace("}", "");
 }
 
 export function getDifferenceInArrays<T>(a: T[], b: T[]): T[] {
@@ -115,11 +123,11 @@ export function getDifferenceInArrays<T>(a: T[], b: T[]): T[] {
         ...b.filter((element) => {
             return !a.includes(element);
         })
-    ]
+    ];
 }
 
 export function isArraysEquals<T>(a: T[], b: T[]): boolean {
-    return getDifferenceInArrays(a, b).length === 0
+    return getDifferenceInArrays(a, b).length === 0;
 }
 
 export function isObjectEquals(object1: any, object2: any) {
@@ -134,10 +142,7 @@ export function isObjectEquals(object1: any, object2: any) {
         const val1 = object1[key];
         const val2 = object2[key];
         const areObjects = isObject(val1) && isObject(val2);
-        if (
-            (areObjects && !isObjectEquals(val1, val2)) ||
-            (!areObjects && val1 !== val2)
-        ) {
+        if ((areObjects && !isObjectEquals(val1, val2)) || (!areObjects && val1 !== val2)) {
             return false;
         }
     }
@@ -146,15 +151,15 @@ export function isObjectEquals(object1: any, object2: any) {
 }
 
 export function isObject(object: any) {
-    return object != null && typeof object === 'object';
+    return object != null && typeof object === "object";
 }
 
 export function capitalizeFirstLetter(str: string) {
-    if (!str) return '';
+    if (!str) return "";
 
     var firstCodeUnit = str[0];
 
-    if (firstCodeUnit < '\uD800' || firstCodeUnit > '\uDFFF') {
+    if (firstCodeUnit < "\uD800" || firstCodeUnit > "\uDFFF") {
         return str[0].toUpperCase() + str.slice(1);
     }
 
@@ -169,23 +174,23 @@ export const groupBy = function (xs: any[], key: string): { [key: string]: any[]
 };
 
 export function actionWithDisabledSaving(action?: () => any) {
-    if (!Xrm.Page.getAttribute)
-        return;
+    if (!Xrm.Page.getAttribute) return;
 
     const attributes = Xrm.Page.getAttribute();
 
-    const attributesSubmitModeStorage = attributes.map(a => { return { attribute: a, submitMode: a.getSubmitMode() } });
+    const attributesSubmitModeStorage = attributes.map((a) => {
+        return { attribute: a, submitMode: a.getSubmitMode() };
+    });
 
-    attributes.forEach(a => {
-        a.setSubmitMode('never');
+    attributes.forEach((a) => {
+        a.setSubmitMode("never");
     });
 
     let result;
-    if (action)
-        result = action();
+    if (action) result = action();
 
     setTimeout(() => {
-        attributesSubmitModeStorage.forEach(a => {
+        attributesSubmitModeStorage.forEach((a) => {
             a.attribute.setSubmitMode(a.submitMode);
         });
     }, 500);
@@ -203,7 +208,6 @@ export function debugError(...args: any[]) {
     }
 }
 
-
 export async function GetPrimaryIdAttribute(entityname: string) {
     return (await Xrm.Utility.getEntityMetadata(entityname)).PrimaryIdAttribute;
 }
@@ -213,30 +217,33 @@ export async function GetPrimaryNameAttribute(entityname: string) {
 
 export function getCurrentDynamics365DateTimeFormat() {
     const dateFormattingInfo = Xrm.Utility.getGlobalContext().userSettings.dateFormattingInfo;
-    const shortDatePattern = dateFormattingInfo.ShortDatePattern.replace(/\byyyy\b/, 'YYYY').replace(/\bdd\b/, 'DD').replace(/\bd\b/, 'DD');
+    const shortDatePattern = dateFormattingInfo.ShortDatePattern.replace(/\byyyy\b/, "YYYY")
+        .replace(/\bdd\b/, "DD")
+        .replace(/\bd\b/, "DD");
     return {
         ShortDatePattern: shortDatePattern,
-        ShortDateTimePattern: shortDatePattern + " " + dateFormattingInfo.ShortTimePattern.replace(/\btt\b/, 'A'),
-        is12hours: dateFormattingInfo.ShortTimePattern.includes('tt'),
-        FullDateTimePattern: dateFormattingInfo.FullDateTimePattern.replace(/\byyyy\b/, 'YYYY').replace(/\bdd\b/, 'DD').replace(/\bd\b/, 'DD'),
-    }
+        ShortDateTimePattern: shortDatePattern + " " + dateFormattingInfo.ShortTimePattern.replace(/\btt\b/, "A"),
+        is12hours: dateFormattingInfo.ShortTimePattern.includes("tt"),
+        FullDateTimePattern: dateFormattingInfo.FullDateTimePattern.replace(/\byyyy\b/, "YYYY")
+            .replace(/\bdd\b/, "DD")
+            .replace(/\bd\b/, "DD")
+    };
 }
 
 export function yieldToMain() {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
         setTimeout(resolve, 0);
     });
 }
 
 export const noOperation = () => {
-    return '' as any;
+    return "" as any;
 };
 
 export type StringKeys<T> = {
     [K in keyof T]: T[K] extends string ? K : never;
 }[keyof T];
 
-
-export function getBridgeEventName(toolId:string) {
-    return `${toolId}:${BRIDGE_SUFFIX}`
+export function getBridgeEventName(toolId: string) {
+    return `${toolId}:${BRIDGE_SUFFIX}`;
 }

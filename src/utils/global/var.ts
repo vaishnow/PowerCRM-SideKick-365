@@ -23,5 +23,6 @@ export const MESSAGE_SOURCE_Content = `${PROJECT_PREFIX}-content`;
 export const STORAGE_WebEditorFavFiles = "webEditorFavFiles";
 
 export const BRIDGE_SUFFIX = "bridge-up";
+export const EXTENSION_STORAGE_SUFFIX = "extensionid";
 
 export const isFirefox = typeof navigator !== "undefined" && /firefox/i.test(navigator.userAgent)
