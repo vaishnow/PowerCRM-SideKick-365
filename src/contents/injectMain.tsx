@@ -25,7 +25,7 @@ window.addEventListener("message", onMessage);
 export const getRootContainer = () =>
     new Promise((resolve) => {
         const checkAndResolve = () => {
-            const mainContent = document.querySelector("#mainContent");
+            const mainContent = document.querySelector("#ApplicationShell");
             const isCRMD365 = Array.from(document.scripts).some((script) =>
                 searchedScripts.some((src) => script.src.includes(src))
             );
