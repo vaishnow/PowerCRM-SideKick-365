@@ -76,5 +76,3 @@ export const defaultToolList: StorageConfiguration[] = ToolPanelButtonList.map((
 //! metadata: actions menu don't close on clickaway
 //! dirty: oldValue issue on complex email fields
 //? formtool: label not displayed in sub form (lookup control)
-//? options: add version to option
-//? configuration: add delay option
