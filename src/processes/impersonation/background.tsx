@@ -85,3 +85,22 @@ export async function manageImpersonation(
             sender.tab && sender.tab.id && chrome.tabs.reload(sender.tab.id, { bypassCache: true });
         });
 }
+
+export async function resetImpersontation(sender: chrome.runtime.MessageSender) {
+    const exitingRules = await getSessionRules();
+
+    exitingRules.forEach(existingRule => {
+        if (!existingRule.condition.urlFilter.endsWith("/_RemovedAction_")) {
+            existingRule.condition.urlFilter += "/_RemovedAction_";
+        }
+    });
+
+    chrome.declarativeNetRequest
+        .updateSessionRules({
+            removeRuleIds: exitingRules?.map((r) => r.id), // remove existing rules
+            addRules: exitingRules
+        }).then(() => {
+            sender.tab && sender.tab.id && chrome.tabs.reload(sender.tab.id, { bypassCache: true });
+        });;
+}
+

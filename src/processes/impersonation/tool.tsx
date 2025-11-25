@@ -1,5 +1,4 @@
 import ExtensionIcon from "@mui/icons-material/Extension";
-import PersonSearchIcon from "@mui/icons-material/PersonSearch";
 import PestControlIcon from "@mui/icons-material/PestControl";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import SecurityIcon from "@mui/icons-material/Security";
@@ -38,8 +37,9 @@ import {
 import { RetrieveSecurityRole } from "../../utils/hooks/XrmApi/RetrieveSecurityRole";
 import type { ActiveUser } from "../../utils/types/ActiveUser";
 import { MessageType } from "../../utils/types/Message";
-import type { SecurityRole, TeamsSecurityRole } from "../../utils/types/SecurityRole";
+import type { SecurityRole } from "../../utils/types/SecurityRole";
 import RolesDisplayList from "./shared/RolesDisplayList";
+
 
 class ImpersonationProcess extends ProcessButton {
     static id = "impersonate";
@@ -132,7 +132,7 @@ const Impersonation = forwardRef<ProcessRef, ProcessProps>(function Impersonatio
         [sendNewUserToBackground, setUserSelected]
     );
 
-    useEffect(() => {
+   useEffect(() => {
         if (!activeUsers) return;
         MessageManager.sendMessage(MessageType.GETIMPERSONATION).then(function (
             existingRules: chrome.declarativeNetRequest.Rule[] | null
@@ -200,21 +200,22 @@ const Impersonation = forwardRef<ProcessRef, ProcessProps>(function Impersonatio
         <Stack direction="column" spacing={0.5} padding="10px" height="calc(100% - 20px)">
             <DontShowInfo storageName={`${props.id}-maininfo`} displayOpenOptionButton>
                 <Typography variant="body2">
-                    If you made a mistake and can no longer access this tool, you can reset the impersonation by
+                    If you can no longer access this tool, you can reset the impersonation by
                     clicking on the extensions button (<ExtensionIcon fontSize="inherit" />) in your browser toolbar and
                     opening the extension, which will show you the options.
                 </Typography>
             </DontShowInfo>
 
             <Stack direction="row" spacing={0.5} width="-webkit-fill-available">
-                <FilterInput fullWidth placeholder="Name or Email address" returnFilterInput={setFilter} />
 
                 <SecurityRoleMenu
                     securityRoleSeclected={securityRoleSelected}
                     setSecurityRoleSeclected={setSecurityRoleSeclected}
                 />
 
-                <Tooltip title={"Hard Reset"}>
+                <FilterInput fullWidth placeholder="Name or Email address" returnFilterInput={setFilter} />
+
+                <Tooltip title={<Typography>Hard Reset</Typography>}>
                     <IconButton onClick={() => sendNewUserToBackground(null)}>
                         <RestartAltIcon />
                     </IconButton>
@@ -248,6 +249,7 @@ const Impersonation = forwardRef<ProcessRef, ProcessProps>(function Impersonatio
 
             {selectedUser && activeUsers.length > 0 && (
                 <>
+                    <Typography height="15px" variant="overline">Impersonating:</Typography>
                     <UserItem
                         user={activeUsers.find((user) => user.systemuserid === selectedUser.systemuserid)!}
                         userSelected={selectedUser}
@@ -260,7 +262,7 @@ const Impersonation = forwardRef<ProcessRef, ProcessProps>(function Impersonatio
             {isFetching ? (
                 [...Array(22)].map(() => <Skeleton variant="rounded" height={rowHeight + "px"} />)
             ) : activeUsers.length > 0 ? (
-                <List sx={{ width: "100%", height: "100%" }}>
+                <List sx={{ width: "100%", height: "100%", pt: 0 }}>
                     <MuiVirtuoso
                         data={filteredActiveUsers}
                         itemContent={(index, user) => {
@@ -270,7 +272,7 @@ const Impersonation = forwardRef<ProcessRef, ProcessProps>(function Impersonatio
                 </List>
             ) : (
                 <Typography variant="caption" textAlign="center" color="grey" fontSize="small">
-                    No enabled {!isOnPrem && "and licensed "}user found
+                    No enabled {!isOnPrem && "and licensed "}user found.
                 </Typography>
             )}
         </Stack>
@@ -383,7 +385,7 @@ function SecurityRoleMenu(props: SecurityRoleMenuProps) {
 
     return (
         <>
-            <Tooltip title={"Select security roles"}>
+            <Tooltip title={<Typography>Select security roles</Typography>}>
                 <IconButton onClick={handleClick}>
                     <SecurityIcon />
                 </IconButton>

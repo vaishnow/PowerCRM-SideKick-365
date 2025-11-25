@@ -1,8 +1,10 @@
 export enum MessageType {
+    GETCURRENTTABID = 'GetCurrentTabId',
     REFRESHBYPASSCACHE = 'RefreshBypassCache',
 
     IMPERSONATE = 'impersonate',
     GETIMPERSONATION = 'getImpersonation',
+    RESETIMPERSONATION = 'resetImpersonation',
 
     SETCONFIGURATION = 'setConfiguration',
     GETCONFIGURATION = 'getConfiguration',

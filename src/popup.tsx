@@ -25,7 +25,7 @@ const OptionsScreen: React.FunctionComponent = () => {
 
             const urlObject = new URL(activeTabURL);
 
-            chrome.runtime.sendMessage({ type: MessageType.IMPERSONATE, data: { userSelected: null, selectedon: new Date(), url: urlObject.origin } },
+            chrome.runtime.sendMessage({ type: MessageType.RESETIMPERSONATION },
                 function () {
                     chrome.tabs.reload(activeTab.id!, { bypassCache: true })
                 }
@@ -61,7 +61,7 @@ const OptionsScreen: React.FunctionComponent = () => {
                         This section is not where you can use this extension:
                     </Typography>
                     <Typography component='p' fontSize='0.95rem'>
-                        Dynamics SideKick adds a panel at the right of Dynamics 365 pages.
+                        PowerCRM SideKick 365 adds a panel at the right of Microsoft Dynamics 365 pages.
                     </Typography>
                 </Alert>
 
@@ -80,7 +80,7 @@ const OptionsScreen: React.FunctionComponent = () => {
                 <Button
                     variant='contained'
                     onClick={resetImpersonate}>
-                    Reset Impersonation on Active tab
+                    Reset Impersonation
                 </Button>
 
                 <Button
