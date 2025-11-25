@@ -353,7 +353,7 @@ export function DecimalNode(props: AttributeProps) {
         setValue(newValue)
         setDirty(newValue)
     }
-    
+
 
     return (
         <>
@@ -833,7 +833,8 @@ export function BooleanNode(props: AttributeProps & { entityname: string }) {
                 startAdornment={(
                     <InputAdornment
                         position='start'
-                        onClick={() => {
+                        onClick={(event) => {
+                            event.stopPropagation();
                             !props.disabled &&
                                 setValue(old => {
                                     setDirty(!old)
@@ -913,17 +914,22 @@ export function DateTimeNode(props: AttributeProps) {
                 format={dateTimeFormat.ShortDatePattern}
                 slotProps={{
                     inputAdornment: {
-                        position: 'start',
+                        sx: {
+                            ml: 0.5
+                        }
                     },
-                    field: { clearable: true }
+                    field: {
+                        clearable: true,
+                        openPickerButtonPosition: "start"
+                    },
                 }}
                 sx={{
                     width: '100%',
-                    '& input': {
-                        padding: '8.5px 14px 8.5px 0px'
-                    },
                     '& fieldset': {
                         borderWidth: !!value && !value.isValid() ? 'thick' : undefined,
+                    },
+                    "& > div": {
+                        height: "37px",
                     }
                 }}
                 disabled={props.disabled}
@@ -936,17 +942,22 @@ export function DateTimeNode(props: AttributeProps) {
                 format={dateTimeFormat.ShortDateTimePattern}
                 slotProps={{
                     inputAdornment: {
-                        position: 'start',
+                        sx: {
+                            ml: 0.5
+                        }
                     },
-                    field: { clearable: true }
+                    field: {
+                        clearable: true,
+                        openPickerButtonPosition: "start"
+                    },
                 }}
                 sx={{
                     width: '100%',
-                    '& input': {
-                        padding: '8.5px 14px 8.5px 0px'
-                    },
                     '& fieldset': {
                         borderWidth: !!value && !value.isValid() ? 'thick' : undefined,
+                    },
+                    "& > div": {
+                        height: "37px",
                     }
                 }}
                 disabled={props.disabled}
