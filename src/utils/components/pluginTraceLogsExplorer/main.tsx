@@ -33,7 +33,10 @@ const DateTimeSx: SxProps<Theme> = {
     "& input": {
         padding: "8.5px 0px 8.5px 14px"
     },
-    "& label:not(.Mui-focused)": {
+    "& > div": {
+        height: "37px",
+    },
+    "& label:not([data-shrink=true])": {
         transform: "translate(14px, 8px) scale(1)"
     }
 };
@@ -140,7 +143,7 @@ const PluginTraceLogsPane = React.memo((props: PluginTraceLogsPaneProps) => {
             firstPluginTraceLogs &&
             (!firstPluginTraceLogsInList ||
                 firstPluginTraceLogs.plugintracelogid !==
-                    firstPluginTraceLogsInList.plugintracelogid)
+                firstPluginTraceLogsInList.plugintracelogid)
         ) {
             refreshPluginTraceLogs();
         }

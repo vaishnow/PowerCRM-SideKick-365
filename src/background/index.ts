@@ -1,4 +1,4 @@
-import { manageImpersonation } from "~processes/impersonation/background";
+import { manageImpersonation, resetImpersontation } from "~processes/impersonation/background";
 import { setExtensionConfiguration, getExtensionConfiguration } from "~processes/setConfiguration/background";
 import { getSessionRules } from "~utils/global/DeclarativeNetRequestManager";
 import { MessageType } from "~utils/types/Message";
@@ -14,12 +14,18 @@ function messagesStation(message: { type: string, data: any }, sender: chrome.ru
         case MessageType.REFRESHBYPASSCACHE:
             sender.tab && sender.tab.id && chrome.tabs.reload(sender.tab.id, { bypassCache: true });
             return false;
+        case MessageType.GETCURRENTTABID:
+            sendResponse(sender.tab?.id);
+            return true;
 
         case MessageType.IMPERSONATE:
             manageImpersonation(message.data, sender).then(sendResponse);
             return true;
         case MessageType.GETIMPERSONATION:
             getSessionRules().then(sendResponse);
+            return true;
+        case MessageType.RESETIMPERSONATION:
+            resetImpersontation(sender).then(sendResponse);
             return true;
 
         case MessageType.SETCONFIGURATION:

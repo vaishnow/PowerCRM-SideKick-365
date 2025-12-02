@@ -85,7 +85,7 @@ function SplitDropDownButtonGroup(
                     "& > *:first-of-type": {
                         borderRadius: `${theme.shape.borderRadius}px 0 0 ${theme.shape.borderRadius}px`
                     },
-                    "& > *": {
+                    "& > *:not(:first-of-type):not(:last-of-type)": {
                         borderRadius: "0 !important"
                     },
                     "& > *:last-of-type": {

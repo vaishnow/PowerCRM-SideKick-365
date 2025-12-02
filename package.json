@@ -1,7 +1,7 @@
 {
     "name": "powercrm-sidekick-365",
     "displayName": "PowerCRM SideKick 365",
-    "version": "1.2",
+    "version": "1.2.1",
     "description": "Enhance your Microsoft Dynamics 365 experience with a custom side panel built for devs and testing.",
     "author": "Sofiane GUEZZAR <sofiane.guezzar@gmail.com>",
     "scripts": {

@@ -52,7 +52,7 @@ export function waitForElm<T extends HTMLElement>(
 
         if (!infiniteWait) {
             timeout = setTimeout(() => {
-                console.warn(
+                debugLog(
                     "SidePanel Tools - waitForElm: the DOM element",
                     selector,
                     "is not found on document",

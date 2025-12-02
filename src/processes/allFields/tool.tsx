@@ -443,7 +443,18 @@ const AttributeList = React.memo((props: AttributeListProps & AttributeListCommo
                 pr={0}
                 pt={0}
                 alignItems="center">
-                <ButtonGroup variant="contained" fullWidth size="small">
+                <ButtonGroup variant="contained" fullWidth size="small" 
+                sx={(theme) => ({
+                    "& > *:first-of-type": {
+                        borderRadius: `${theme.shape.borderRadius}px 0 0 ${theme.shape.borderRadius}px`
+                    },
+                    "& > *:not(:first-of-type):not(:last-of-type)": {
+                        borderRadius: "0 !important"
+                    },
+                    "& > *:last-of-type": {
+                        borderRadius: `0 ${theme.shape.borderRadius}px ${theme.shape.borderRadius}px 0`
+                    },
+                })}>
                     <Button onClick={toggleForceOpen}>Open All</Button>
                     <Button onClick={toggleForceClose}>Close All</Button>
                     <Button onClick={forceRefresh}>Refresh</Button>

@@ -13,14 +13,14 @@ import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
-import { createTheme, lighten } from "@mui/material/styles";
+import { createTheme, lighten, StyledEngineProvider, useTheme } from "@mui/material/styles";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import ThemeProvider from "@mui/styles/ThemeProvider";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { useSnackbar } from "notistack";
+import { SnackbarProvider, useSnackbar } from "notistack";
 import React, {
     forwardRef,
     useCallback,
@@ -63,87 +63,38 @@ import {
     type AttributeProps
 } from "./nodes";
 import { useUpdateEffect } from "@custom-react-hooks/all";
+import DetailsSnackbar from "~utils/components/DetailsSnackbar";
+import { PROJECT_PREFIX } from "~utils/global/var";
 
 class UpdateRecordProcess extends ProcessButton {
     static id = "updaterecord";
     constructor() {
         super("updaterecord");
-        this.process = UpdateRecord;
-        this.processContainer = (props) => {
-            return (
-                <ThemeProvider theme={theme}>
-                    <LocalizationProvider dateAdapter={AdapterDayjs}>{props.children}</LocalizationProvider>
-                </ThemeProvider>
-            );
-        };
+        this.process = UpdateRecordContainer;
     }
 }
 
 const ROW_HEIGHT = 42.625;
 
-const defaultTheme = createTheme();
-const theme = createTheme({
-    components: {
-        MuiStack: {
-            variants: [
-                {
-                    props: { className: "disabled" },
-                    style: {
-                        backgroundColor: defaultTheme.palette.grey[200]
-                    }
-                },
-                {
-                    props: { className: "dirty" },
-                    style: {
-                        backgroundColor: defaultTheme.palette.secondary.main
-                    }
-                },
-                {
-                    props: { className: "toupdate" },
-                    style: {
-                        backgroundColor: defaultTheme.palette.primary.dark
-                    }
-                }
-            ]
-        },
-        MuiTypography: {
-            variants: [
-                {
-                    props: { className: "disabled" },
-                    style: {
-                        color: defaultTheme.palette.text.disabled
-                    }
-                },
-                {
-                    props: { className: "dirty" },
-                    style: {
-                        color: defaultTheme.palette.secondary.contrastText
-                    }
-                },
-                {
-                    props: { className: "toupdate" },
-                    style: {
-                        color: defaultTheme.palette.primary.contrastText
-                    }
-                }
-            ]
-        },
-        MuiInputBase: {
-            styleOverrides: {
-                root: {
-                    backgroundColor: "white"
-                }
-            },
-            variants: [
-                {
-                    props: { disabled: true },
-                    style: {
-                        backgroundColor: defaultTheme.palette.grey[100]
-                    }
-                }
-            ]
-        }
-    }
+const UpdateRecordContainer = forwardRef<ProcessRef, ProcessProps>(function UpdateRecordContainer(
+    props: ProcessProps,
+    ref
+) {
+    return (
+        <StyledEngineProvider injectFirst>
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <SnackbarProvider
+                    dense
+                    maxSnack={5}
+                    Components={{
+                        detailsFile: DetailsSnackbar
+                    }}>
+                    <UpdateRecord ref={ref} {...props} />
+                </SnackbarProvider>
+            </LocalizationProvider>
+        </StyledEngineProvider>
+
+    );
 });
 
 type AvailableModes = "update" | "create";
@@ -430,36 +381,42 @@ function AttributesList(props: AttributesListProps) {
                 resetAttributes={resetAttributes}
                 mode={props.mode}
             />
-            <Stack spacing={"2px"} height="100%" sx={{ overflowY: "scroll", overflowX: "hidden" }}>
+            <Stack spacing={"2px"} height="100%" sx={{
+                overflowY: "scroll",
+                overflowX: "hidden",
+                [`& .${PROJECT_PREFIX}InputBase-root, & .${PROJECT_PREFIX}PickersInputBase-root`] : {
+                    bgcolor: "white"
+                }
+            }}>
                 {!fetchingValues
                     ? selectedAttribute?.map((metadata) => {
-                          const attributeName =
-                              metadata.MStype !== MSType.Lookup
-                                  ? metadata.LogicalName
-                                  : "_" + metadata.LogicalName + "_value";
-                          return (
-                              <AttributeNode
-                                  key={attributeName}
-                                  disabled={
-                                      props.mode !== "create" ? !metadata.IsValidForUpdate : !metadata.IsValidForCreate
-                                  }
-                                  attribute={metadata}
-                                  entityname={props.entityname}
-                                  value={attributesRetrieved[attributeName]}
-                                  filter={filter}
-                                  resetAttributes={props.resetAttributes}
-                                  attributeToUpdateManager={props.attributeToUpdateManager}
-                                  unselectAttribute={handleUnselectAttribute}
-                              />
-                          );
-                      })
+                        const attributeName =
+                            metadata.MStype !== MSType.Lookup
+                                ? metadata.LogicalName
+                                : "_" + metadata.LogicalName + "_value";
+                        return (
+                            <AttributeNode
+                                key={attributeName}
+                                disabled={
+                                    props.mode !== "create" ? !metadata.IsValidForUpdate : !metadata.IsValidForCreate
+                                }
+                                attribute={metadata}
+                                entityname={props.entityname}
+                                value={attributesRetrieved[attributeName]}
+                                filter={filter}
+                                resetAttributes={props.resetAttributes}
+                                attributeToUpdateManager={props.attributeToUpdateManager}
+                                unselectAttribute={handleUnselectAttribute}
+                            />
+                        );
+                    })
                     : [...Array(16)].map((_value, index) => (
-                          <Skeleton
-                              key={`waitingupdaterecordskeleton${index}`}
-                              variant="rounded"
-                              height={ROW_HEIGHT + "px"}
-                          />
-                      ))}
+                        <Skeleton
+                            key={`waitingupdaterecordskeleton${index}`}
+                            variant="rounded"
+                            height={ROW_HEIGHT + "px"}
+                        />
+                    ))}
             </Stack>
         </>
     ) : (
@@ -483,6 +440,8 @@ type AttributeNodeProps = {
     unselectAttribute: (selectedAttribute: AttributeMetadata[]) => void;
 };
 const AttributeNode = React.memo((props: AttributeNodeProps) => {
+    const theme = useTheme();
+
     const { value: isDirty, setTrue, setFalse } = useBoolean(false);
     const manageDirty = { setTrue, setFalse };
 
@@ -502,7 +461,7 @@ const AttributeNode = React.memo((props: AttributeNodeProps) => {
     const isVisibleStyle: string = useMemo(() => (isVisible ? "" : "none"), [isVisible]);
 
     const backgroundColorStyle: string = useMemo(
-        () => (props.disabled ? defaultTheme.palette.grey[200] : isDirty ? defaultTheme.palette.primary.main : ""),
+        () => (props.disabled ? theme.palette.grey[200] : isDirty ? theme.palette.primary.main : ""),
         [props.disabled, isDirty]
     );
 
@@ -556,7 +515,11 @@ const AttributeNode = React.memo((props: AttributeNodeProps) => {
                         whiteSpace="nowrap"
                         overflow="hidden"
                         className={className}
-                        paddingLeft="5px">
+                        paddingLeft="5px"
+                        sx={(theme) => ({
+                            color: props.disabled ? theme.palette.text.disabled : isDirty ? theme.palette.secondary.contrastText : theme.palette.text.primary
+                        })}
+                    >
                         {props.attribute.DisplayName}
                     </Typography>
                 </Stack>
@@ -587,6 +550,8 @@ const AttributeNode = React.memo((props: AttributeNodeProps) => {
 });
 
 function AttributeFactory(props: AttributeProps & { entityname: string }) {
+    const theme = useTheme();
+
     switch (props.attribute.MStype) {
         case MSType.Lookup:
             return (
