@@ -22,6 +22,8 @@ export const MESSAGE_SOURCE_Content = `${PROJECT_PREFIX}-content`;
 
 export const STORAGE_WebEditorFavFiles = "webEditorFavFiles";
 
+export const STORAGE_CloneIgnoredFields = "cloneIgnoredFields";
+
 export const BRIDGE_SUFFIX = "bridge-up";
 export const EXTENSION_STORAGE_SUFFIX = "extensionid";
 

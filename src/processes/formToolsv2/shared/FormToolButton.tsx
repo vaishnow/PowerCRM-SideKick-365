@@ -27,6 +27,7 @@ export type IToolButtonControlled = {
 export type IToolButton = {
     icon: React.ReactNode;
     tooltip: React.ReactNode;
+    onContextMenu?: React.MouseEventHandler<HTMLElement>;
 
     controlled: boolean;
 } & (IToolButtonStandardWithClick | Omit<IToolButtonControlled, "enabled">);
@@ -44,7 +45,7 @@ export const FormToolButton = forwardRef<any, IToolButton>((props, ref) => {
 
 const ToolButtonStandard = forwardRef<any, IToolButton & { controlled: false }>(
     (props, ref) => {
-        const { icon, tooltip, onClick } = props;
+        const { icon, tooltip, onClick, onContextMenu } = props;
         const { refresh } = useContext(FormToolContext);
 
         const refreshContextThenClick = useCallback(() => {
@@ -58,6 +59,7 @@ const ToolButtonStandard = forwardRef<any, IToolButton & { controlled: false }>(
                     ref={ref}
                     variant="contained"
                     onClick={refreshContextThenClick}
+                    onContextMenu={onContextMenu}
                     startIcon={icon}
                 />
             </Tooltip>
