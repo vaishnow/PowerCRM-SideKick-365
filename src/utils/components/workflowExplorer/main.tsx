@@ -7,10 +7,12 @@ import Tab, { tabClasses } from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import { DataGrid, type GridColDef } from "@mui/x-data-grid";
+import { DataGrid, gridClasses, type GridColDef } from "@mui/x-data-grid";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocalStorage } from "usehooks-ts";
 
 import { debugLog, groupBy } from "../../global/common";
+import { PROJECT_PREFIX } from "../../global/var";
 import { useCurrentRecord } from "../../hooks/use/useCurrentRecord";
 import { RetrieveCloudFlows } from "../../hooks/XrmApi/RetrieveCloudFlows";
 import { RetrievePluginSteps } from "../../hooks/XrmApi/RetrievePluginSteps";
@@ -46,6 +48,9 @@ const PROCESS_COLUMNS = [
 
 /** Categories showing the Mode attribute next to the name; the others show Scope. */
 const MODE_CATEGORIES: number[] = [ProcessCategory.Workflow, ProcessCategory.Action];
+
+/** chrome.storage is unreachable from the MAIN world, so the toggle persists per org origin. */
+const HIDE_EMPTY_STORAGE_KEY = `${PROJECT_PREFIX}workflowexplorer.hideEmpty`;
 
 /** Display order of the tabs, by label. */
 const TAB_ORDER = [
@@ -93,7 +98,7 @@ const WorkflowExplorerPane = React.memo((props: { processId: string }) => {
 
     const [filter, setFilter] = useState<string>("");
     const [enabledOnly, setEnabledOnly] = useState<boolean>(false);
-    const [hideEmpty, setHideEmpty] = useState<boolean>(false);
+    const [hideEmpty, setHideEmpty] = useLocalStorage<boolean>(HIDE_EMPTY_STORAGE_KEY, false);
     const [tab, setTab] = useState<number>(0);
     // Cloud flows are fetched only once their tab has been opened: clientdata is heavy.
     const [cloudFlowsRequested, setCloudFlowsRequested] = useState<boolean>(false);
