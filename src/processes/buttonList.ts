@@ -5,6 +5,7 @@ import allFields from "./allFields/button";
 import commandDebugger from "./commandDebugger/button";
 import dirtyFields from "./dirtyFields/button";
 import entitiesList from "./entitiesList/button";
+import formFlags from "./formFlags/button";
 import formToolsV2 from "./formToolsv2/button";
 import impersonation from "./impersonation/button";
 import metadataBrowser from "./metadataBrowser/button";
@@ -33,6 +34,7 @@ export const ToolPanelButtonList: ToolPanelButton[] = [
     new metadataBrowser(),
     new navigation(),
     new commandDebugger(),
+    new formFlags(),
     new workflowExplorer(),
     new createConfiguration()
 ];
