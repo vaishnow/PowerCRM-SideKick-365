@@ -247,3 +247,11 @@ export type StringKeys<T> = {
 export function getBridgeEventName(toolId: string) {
     return `${toolId}:${BRIDGE_SUFFIX}`;
 }
+
+export function getRecordUrl(entityName: string, recordId: string) {
+    return `${window.location.origin}${window.location.pathname}?pagetype=entityrecord&etn=${entityName}&id=${recordId}`;
+}
+
+export function getBapEnvironmentId(): string | undefined {
+    return (Xrm.Utility.getGlobalContext().organizationSettings as any)?.bapEnvironmentId;
+}

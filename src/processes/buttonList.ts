@@ -15,6 +15,7 @@ import relatedRecords from "./relatedRecords/button";
 import createConfiguration from "./setConfiguration/button";
 import updateRecord from "./updateRecord/button";
 import webResourceEditor from "./webResourceEditor/button";
+import workflowExplorer from "./workflowExplorer/button";
 
 
 export const ToolPanelButtonList: ToolPanelButton[] = [
@@ -32,6 +33,7 @@ export const ToolPanelButtonList: ToolPanelButton[] = [
     new metadataBrowser(),
     new navigation(),
     new commandDebugger(),
+    new workflowExplorer(),
     new createConfiguration()
 ];
 
