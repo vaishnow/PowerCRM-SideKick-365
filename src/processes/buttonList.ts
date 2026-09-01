@@ -15,6 +15,7 @@ import pluginTraceLogsExplorer from "./pluginTraceLogsExplorer/button";
 import relatedRecords from "./relatedRecords/button";
 import createConfiguration from "./setConfiguration/button";
 import updateRecord from "./updateRecord/button";
+import userSecurity from "./userSecurity/button";
 import webResourceEditor from "./webResourceEditor/button";
 import workflowExplorer from "./workflowExplorer/button";
 
@@ -28,6 +29,7 @@ export const ToolPanelButtonList: ToolPanelButton[] = [
     new relatedRecords(),
     new entitiesList(),
     new impersonation(),
+    new userSecurity(),
     // // ...(TARGET === ExtensionTarget.Chrome ? [webResourceEditor] : []),
     new webResourceEditor(),
     new pluginTraceLogsExplorer(),
