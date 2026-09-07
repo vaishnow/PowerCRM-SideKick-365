@@ -24,7 +24,7 @@ export function RetrieveUserPrivileges(systemuserid: string | null): [UserPrivil
                 return;
             }
 
-            const response = await fetch(Xrm.Utility.getGlobalContext().getClientUrl() + "/api/data/v9.2/systemusers(" + formatId(systemuserid) + ")/Microsoft.Dynamics.CRM.RetrieveUserPrivileges", {
+            const response = await fetch(Xrm.Utility.getGlobalContext().getClientUrl() + "/api/data/v9.0/systemusers(" + formatId(systemuserid) + ")/Microsoft.Dynamics.CRM.RetrieveUserPrivileges", {
                 method: "GET",
                 headers: {
                     "OData-MaxVersion": "4.0",
@@ -56,7 +56,20 @@ export function RetrieveUserPrivileges(systemuserid: string | null): [UserPrivil
                 }
             });
 
-            setData(Array.from(highestByPrivilege.values()).sort((a, b) => a.name?.localeCompare(b.name)));
+            const privileges = Array.from(highestByPrivilege.values());
+
+            // RetrieveUserPrivileges does not always populate PrivilegeName, so fill the gaps from the privilege table.
+            if (privileges.some((privilege) => !privilege.name)) {
+                const names = await Xrm.WebApi.online.retrieveMultipleRecords("privilege", "?$select=privilegeid,name");
+                const nameById = new Map<string, string>(
+                    names.entities.map((privilege: any) => [privilege["privilegeid"], privilege["name"]])
+                );
+                privileges.forEach((privilege) => {
+                    privilege.name = privilege.name || nameById.get(privilege.privilegeId) || privilege.privilegeId;
+                });
+            }
+
+            setData(privileges.sort((a, b) => a.name.localeCompare(b.name)));
             setFetching(false);
         }
 

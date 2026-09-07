@@ -60,11 +60,26 @@ function DetailRow(props: { label: string; value: string }) {
     const { label, value } = props;
 
     return (
-        <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="baseline" minWidth={0}>
-            <Typography variant="caption" whiteSpace="nowrap" sx={{ opacity: 0.75 }}>
+        <Stack
+            direction="row"
+            spacing={1}
+            justifyContent="space-between"
+            alignItems="baseline"
+            minWidth={0}
+            px={0.5}
+            borderRadius={1}
+            sx={{ "&:hover": { bgcolor: "action.hover" } }}>
+            <Typography whiteSpace="nowrap" sx={{ fontSize: "1em", opacity: 0.75 }}>
                 {label}
             </Typography>
-            <TypographyCopy variant="caption" copyValue={value} title={value} noWrap sx={{ cursor: "pointer" }}>
+            <TypographyCopy
+                copyValue={value}
+                title={value ? `${value}\n(click to copy)` : ""}
+                noWrap
+                flexGrow={1}
+                textAlign="right"
+                fontSize="1em"
+                style={{ cursor: "pointer" }}>
                 {value}
             </TypographyCopy>
         </Stack>
@@ -105,7 +120,7 @@ const UserSecurity = forwardRef<ProcessRef, ProcessProps>(function UserSecurity(
     const [privileges, isPrivilegesFetching, privilegesError] = RetrieveUserPrivileges(selectedUserId);
 
     const filteredPrivileges = useMemo(
-        () => privileges.filter((privilege) => privilege.name?.toLowerCase().includes(privilegeFilter.toLowerCase())),
+        () => privileges.filter((privilege) => (privilege.name ?? "").toLowerCase().includes(privilegeFilter.toLowerCase())),
         [privileges, privilegeFilter]
     );
 
