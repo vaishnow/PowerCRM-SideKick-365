@@ -6,8 +6,21 @@ export type AuditRow = {
     date: Date,
     dateFormatted: string,
     user: string,
+    /** Guid behind `user`, for the link to the systemuser record. */
+    userId: string,
     action: string,
     attribute: string,
     oldValue: string,
     newValue: string,
+    /** Raw audit columns, hidden in the grid by default. Event level: an audit record fanning out
+     * to several attribute rows repeats these on each of them. */
+    auditid: string,
+    operation: string,
+    objectTypeCode: string,
+    attributeMask: string,
+    changeData: string,
+    transactionId: string,
+    callingUser: string,
+    callingUserId: string,
+    userAdditionalInfo: string,
 }

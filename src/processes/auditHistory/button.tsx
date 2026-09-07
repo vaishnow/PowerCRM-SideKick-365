@@ -20,7 +20,11 @@ class AuditHistoryButton extends ToolPanelButton {
                     The rows can be <u>filtered by text and by date range</u>, and sorted on any column.
                 </Typography>
                 <Typography>
-                    It needs auditing enabled on the table and the <b>View Audit History</b> privilege.
+                    The raw audit columns - <b>change data</b>, attribute mask, operation, transaction id, calling
+                    user - are hidden: unhide them from a column header menu, under <i>Manage columns</i>.
+                </Typography>
+                <Typography>
+                    It needs auditing enabled on the table and the <b>prvReadAuditSummary</b> privilege.
                 </Typography>
             </>
         );
