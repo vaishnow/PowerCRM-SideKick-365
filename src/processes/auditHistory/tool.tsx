@@ -1,6 +1,11 @@
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
+import IconButton from "@mui/material/IconButton";
 import Link from "@mui/material/Link";
+import MenuItem from "@mui/material/MenuItem";
+import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { type SxProps, type Theme } from "@mui/material/styles";
 import { DataGrid, gridClasses, type GridColDef } from "@mui/x-data-grid";
@@ -8,6 +13,7 @@ import { DateTimePicker, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs, { type Dayjs } from "dayjs";
 import { forwardRef, useCallback, useEffect, useMemo, useState } from "react";
+import { useLocalStorage } from "usehooks-ts";
 
 import ButtonLinearProgress from "../../utils/components/ButtonLinearProgress";
 import FilterInput from "../../utils/components/FilterInput";
@@ -15,9 +21,14 @@ import RecordSearchBar from "../../utils/components/RecordSearchBar";
 import { CustomLoadingOverlay, CustomNoRowsOverlay } from "../../utils/components/MetadataBrowser/StyledDataGrid";
 import { ProcessButton, type ProcessProps, type ProcessRef } from "../../utils/global/.processClass";
 import { getCurrentDynamics365DateTimeFormat, getRecordUrl } from "../../utils/global/common";
+import { PROJECT_PREFIX } from "../../utils/global/var";
 import { useCurrentRecord } from "../../utils/hooks/use/useCurrentRecord";
 import { type AuditRow } from "../../utils/types/AuditHistory";
-import { AUDIT_PAGE_CAP, RetrieveAuditHistory } from "../../utils/hooks/XrmApi/RetrieveAuditHistory";
+import {
+    AUDIT_PAGE_SIZE_DEFAULT,
+    AUDIT_PAGE_SIZES,
+    RetrieveAuditHistory
+} from "../../utils/hooks/XrmApi/RetrieveAuditHistory";
 
 class AuditHistoryProcess extends ProcessButton {
     static id = "audithistory";
@@ -26,6 +37,9 @@ class AuditHistoryProcess extends ProcessButton {
         this.process = AuditHistory;
     }
 }
+
+/** chrome.storage is unreachable from the MAIN world, so the choice persists per org origin. */
+const PAGE_SIZE_STORAGE_KEY = `${PROJECT_PREFIX}audithistory.pageSize`;
 
 const DateTimeSx: SxProps<Theme> = {
     width: "100%",
@@ -64,6 +78,24 @@ function RecordLinkCell(props: { label: string; entityName: string; recordId: st
 }
 
 /**
+ * An old or new value. The hook fills the entity and id only for a lookup change, where changedata
+ * named the target table in the value, so anything else renders as plain text.
+ */
+function ChangedValueCell(props: { label: string; entityName: string; recordId: string }) {
+    const { label, entityName, recordId } = props;
+
+    if (!entityName || !recordId) {
+        return (
+            <Typography variant="body2" noWrap>
+                {label}
+            </Typography>
+        );
+    }
+
+    return <RecordLinkCell label={label} entityName={entityName} recordId={recordId} />;
+}
+
+/**
  * Event level cells are merged down the attribute rows of one audit record. Spanning on the audit
  * id rather than the displayed value keeps two consecutive events apart even when the same user
  * ran the same action twice, while sorting and filtering still see the real value.
@@ -84,8 +116,32 @@ const COLUMNS: GridColDef[] = [
     },
     { field: "action", headerName: "Action", width: 100, rowSpanValueGetter: spanByEvent },
     { field: "attribute", headerName: "Attribute", width: 160 },
-    { field: "oldValue", headerName: "Old Value", flex: 1, minWidth: 120 },
-    { field: "newValue", headerName: "New Value", flex: 1, minWidth: 120 },
+    {
+        field: "oldValue",
+        headerName: "Old Value",
+        flex: 1,
+        minWidth: 120,
+        renderCell: (params) => (
+            <ChangedValueCell
+                label={params.value}
+                entityName={params.row.oldEntity}
+                recordId={params.row.oldId}
+            />
+        )
+    },
+    {
+        field: "newValue",
+        headerName: "New Value",
+        flex: 1,
+        minWidth: 120,
+        renderCell: (params) => (
+            <ChangedValueCell
+                label={params.value}
+                entityName={params.row.newEntity}
+                recordId={params.row.newId}
+            />
+        )
+    },
     { field: "operation", headerName: "Operation", width: 100, rowSpanValueGetter: spanByEvent },
     { field: "attributeMask", headerName: "Attribute Mask", width: 140, rowSpanValueGetter: spanByEvent },
     { field: "changeData", headerName: "Change Data", width: 300, rowSpanValueGetter: spanByEvent },
@@ -136,7 +192,18 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
     }, [currentRecordId]);
 
     const recordId = recordIds.at(0);
-    const [rows, isFetching, error, refresh] = RetrieveAuditHistory(entityName, recordId);
+    const [pageSize, setPageSize] = useLocalStorage<number>(PAGE_SIZE_STORAGE_KEY, AUDIT_PAGE_SIZE_DEFAULT);
+    const [page, setPage] = useState<number>(0);
+    const [rows, isFetching, error, refresh, hasMore] = RetrieveAuditHistory(
+        entityName,
+        recordId,
+        page,
+        pageSize
+    );
+
+    useEffect(() => {
+        setPage(0);
+    }, [entityName, recordId, pageSize]);
 
     // A record of the previous entity cannot be audited under the new one.
     const onEntityChange = useCallback((name: string) => {
@@ -219,9 +286,42 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                             }}
                         />
                     </Stack>
-                    <Typography variant="caption" sx={{ opacity: 0.75 }}>
-                        {recordId ? `${rows.length} change rows, latest ${AUDIT_PAGE_CAP} events` : "Select an entity and a record."}
-                    </Typography>
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                        <TextField
+                            select
+                            size="small"
+                            label="Audit records"
+                            value={pageSize}
+                            onChange={(event) => setPageSize(Number(event.target.value))}
+                            sx={{ width: 130 }}>
+                            {AUDIT_PAGE_SIZES.map((size) => (
+                                <MenuItem key={size} value={size}>
+                                    {size}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+
+                        <Typography variant="caption" flexGrow={1} sx={{ opacity: 0.75 }}>
+                            {recordId
+                                ? `Page ${page + 1} - ${rows.length} change rows`
+                                : "Select an entity and a record."}
+                        </Typography>
+
+                        <IconButton
+                            size="small"
+                            title="Previous page"
+                            disabled={page === 0 || isFetching}
+                            onClick={() => setPage((previous) => previous - 1)}>
+                            <ChevronLeftIcon />
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            title="Next page"
+                            disabled={!hasMore || isFetching}
+                            onClick={() => setPage((previous) => previous + 1)}>
+                            <ChevronRightIcon />
+                        </IconButton>
+                    </Stack>
                     {error && (
                         <Typography variant="caption" color="error">
                             {error}

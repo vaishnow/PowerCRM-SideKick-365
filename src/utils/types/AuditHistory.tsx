@@ -12,6 +12,11 @@ export type AuditRow = {
     attribute: string,
     oldValue: string,
     newValue: string,
+    /** Target of oldValue/newValue when the changed column is a lookup, else empty. */
+    oldEntity: string,
+    oldId: string,
+    newEntity: string,
+    newId: string,
     /** Raw audit columns, hidden in the grid by default. Event level: an audit record fanning out
      * to several attribute rows repeats these on each of them. */
     auditid: string,
