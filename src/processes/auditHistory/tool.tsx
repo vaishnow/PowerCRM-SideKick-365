@@ -1,5 +1,7 @@
+import CancelIcon from "@mui/icons-material/Cancel";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import IconButton from "@mui/material/IconButton";
@@ -203,6 +205,7 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
 
     useEffect(() => {
         setPage(0);
+        setFields([]);
     }, [entityName, recordId, pageSize]);
 
     // A record of the previous entity cannot be audited under the new one.
@@ -217,10 +220,18 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
     }, [currentEntityName, currentRecordId]);
 
     const [filter, setFilter] = useState<string>("");
+    const [fields, setFields] = useState<string[]>([]);
     const [filterDateMin, setFilterDateMin] = useState<Dayjs | null>(null);
     const [filterDateMax, setFilterDateMax] = useState<Dayjs | null>(null);
 
     const dateTimeFormat = useMemo(() => getCurrentDynamics365DateTimeFormat(), []);
+
+    // Only fields that actually changed in the loaded rows are offered: an option matching nothing
+    // is not worth showing. Events with no attribute detail contribute an empty name.
+    const fieldOptions = useMemo(
+        () => [...new Set(rows.map((row) => row.attribute))].filter(Boolean).sort(),
+        [rows]
+    );
 
     const rowsFiltered = useMemo(
         () =>
@@ -234,11 +245,12 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                     row.oldValue.toLowerCase().includes(search) ||
                     row.newValue.toLowerCase().includes(search) ||
                     row.changeData.toLowerCase().includes(search);
+                const fieldFilterResult = !fields.length || fields.includes(row.attribute);
                 const dateFilterMin = !filterDateMin || dayjs(row.date) >= filterDateMin;
                 const dateFilterMax = !filterDateMax || dayjs(row.date) <= filterDateMax;
-                return textFilterResult && dateFilterMin && dateFilterMax;
+                return textFilterResult && fieldFilterResult && dateFilterMin && dateFilterMax;
             }),
-        [rows, filter, filterDateMin, filterDateMax]
+        [rows, filter, fields, filterDateMin, filterDateMax]
     );
 
     return (
@@ -252,13 +264,32 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                         setRecordIds={setRecordIds}
                         reset={reset}
                     />
-                    <Stack direction="row" spacing={1} alignItems="center">
-                        <FilterInput fullWidth placeholder="Search in changes" returnFilterInput={setFilter} />
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Box width="32%">
+                            <FilterInput fullWidth placeholder="Search in changes" returnFilterInput={setFilter} />
+                        </Box>
+                        <Autocomplete
+                            multiple
+                            size="small"
+                            limitTags={1}
+                            disableCloseOnSelect
+                            options={fieldOptions}
+                            value={fields}
+                            onChange={(event, value) => setFields(value)}
+                            sx={{ width: "44%" }}
+                            // Chip already styles its delete icon with cursor: pointer, but a host
+                            // page stylesheet wins over it. Inline beats both, as the cursor
+                            // handling in RecordSelector does. The icon is the one Chip defaults to.
+                            slotProps={{ chip: { deleteIcon: <CancelIcon style={{ cursor: "pointer" }} /> } }}
+                            renderInput={(params) => (
+                                <TextField {...params} placeholder={fields.length ? "" : "All fields"} />
+                            )}
+                        />
                         <ButtonLinearProgress
                             variant="contained"
                             loading={isFetching}
                             onClick={refresh}
-                            sx={{ whiteSpace: "nowrap", width: "25%" }}>
+                            sx={{ whiteSpace: "nowrap", width: "24%" }}>
                             Refresh
                         </ButtonLinearProgress>
                     </Stack>
@@ -303,7 +334,9 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
 
                         <Typography variant="caption" flexGrow={1} sx={{ opacity: 0.75 }}>
                             {recordId
-                                ? `Page ${page + 1} - ${rows.length} change rows`
+                                ? `Page ${page + 1} - ${rowsFiltered.length}${
+                                      rowsFiltered.length === rows.length ? "" : ` of ${rows.length}`
+                                  } change rows`
                                 : "Select an entity and a record."}
                         </Typography>
 

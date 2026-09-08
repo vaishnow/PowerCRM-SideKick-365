@@ -17,7 +17,8 @@ class AuditHistoryButton extends ToolPanelButton {
                     attribute: date, user, action, attribute, old value and new value.
                 </Typography>
                 <Typography>
-                    The rows can be <u>filtered by text and by date range</u>, and sorted on any column.
+                    The rows can be <u>filtered by text, by date range and by field</u> - the field filter takes
+                    several fields at once - and sorted on any column.
                 </Typography>
                 <Typography>
                     The raw audit columns - <b>change data</b>, attribute mask, operation, transaction id, calling
