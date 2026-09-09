@@ -9,10 +9,10 @@ import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import Editor from "@monaco-editor/react";
 import { useSnackbar } from "notistack";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
+import { CircularProgressCenteredUnbound } from "../CircularProgressCenteredUnbound";
 import { ExecuteFetchXML } from "../../hooks/XrmApi/ExecuteFetchXML";
 import { RetrieveViews, type ViewRetrieved } from "../../hooks/XrmApi/RetrieveViews";
 import useCopyWithSnack from "../../hooks/use/useCopyWithSnack";
@@ -34,6 +34,17 @@ import {
 } from "./utils/fetchXml";
 
 const PAGE_SIZE = 50;
+
+/**
+ * Monaco is pulled in on demand. It has to be registered on the loader explicitly, otherwise the
+ * editor is fetched from a CDN that the host page blocks, and it never finishes loading.
+ */
+const MonacoXmlEditor = lazy(async () => {
+    const monaco = await import("monaco-editor");
+    const monacoReact = await import("@monaco-editor/react");
+    monacoReact.loader.config({ monaco });
+    return { default: monacoReact.default };
+});
 
 function FetchXmlBuilderPane() {
     const { enqueueSnackbar } = useSnackbar();
@@ -171,12 +182,14 @@ function FetchXmlBuilderPane() {
                 </Box>
 
                 <Box width="60%" minWidth={0}>
-                    <Editor
-                        language="xml"
-                        value={xml}
-                        onChange={(newXml) => setXml(newXml ?? "")}
-                        options={{ minimap: { enabled: false }, wordWrap: "on" }}
-                    />
+                    <Suspense fallback={<CircularProgressCenteredUnbound />}>
+                        <MonacoXmlEditor
+                            language="xml"
+                            value={xml}
+                            onChange={(newXml) => setXml(newXml ?? "")}
+                            options={{ minimap: { enabled: false }, wordWrap: "on" }}
+                        />
+                    </Suspense>
                 </Box>
             </Stack>
 
