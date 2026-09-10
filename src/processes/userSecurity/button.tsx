@@ -6,7 +6,7 @@ import { ToolPanelButton } from "~utils/global/.toolPanelButton";
 class UserSecurityButton extends ToolPanelButton {
     static id = "usersecurity";
     constructor() {
-        super("usersecurity", "User Security", () => AdminPanelSettingsIcon, 500);
+        super("usersecurity", "User Details", () => AdminPanelSettingsIcon, 500);
         this.description = (
             <>
                 <Typography>
@@ -17,6 +17,9 @@ class UserSecurityButton extends ToolPanelButton {
                     <b>effective privileges</b> of a user.
                 </Typography>
                 <Typography>It opens on the current user, and any other user can be selected.</Typography>
+                <Typography>
+                    Your own <b>personal settings</b> can be changed from here, and the user record can be opened.
+                </Typography>
             </>
         );
     }
