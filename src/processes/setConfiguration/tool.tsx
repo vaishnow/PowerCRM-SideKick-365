@@ -19,6 +19,12 @@ import { forwardRef, useCallback, useEffect, useMemo, useState } from "react";
 import { ProcessButton, type ProcessProps, type ProcessRef } from "../../utils/global/.processClass";
 import { debugLog } from "../../utils/global/common";
 import MessageManager from "../../utils/global/MessageManager";
+import {
+    defaultEnvironmentTheme,
+    EnvironmentType,
+    STORAGE_EnvironmentTheme,
+    type TYPE_EnvironmentTheme
+} from "../../utils/global/environmentType";
 import { STORAGE_ForegroundPanes, STORAGE_ListName } from "../../utils/global/var";
 import { MessageType } from "../../utils/types/Message";
 import type { StorageConfiguration } from "../../utils/types/StorageConfiguration";
@@ -174,6 +180,7 @@ const SetConfiguration = forwardRef<ProcessRef, ProcessProps>(function SetConfig
     const [configurationSaved, setConfigurationSaved] = useState<boolean>(false);
 
     const [isForegroundPanes, setIsForegroundPanes] = useState<boolean>(false);
+    const [environmentTheme, setEnvironmentTheme] = useState<TYPE_EnvironmentTheme>(defaultEnvironmentTheme);
     const [isDragging, setIsDragging] = useState(false);
 
     useEffect(() => {
@@ -186,6 +193,16 @@ const SetConfiguration = forwardRef<ProcessRef, ProcessProps>(function SetConfig
             response: boolean | null
         ) {
             setIsForegroundPanes(response ?? false);
+        });
+        MessageManager.sendMessage(MessageType.GETCONFIGURATION, { key: STORAGE_EnvironmentTheme }).then(function (
+            response: TYPE_EnvironmentTheme | null
+        ) {
+            if (!response) return;
+            setEnvironmentTheme({
+                ...defaultEnvironmentTheme,
+                ...response,
+                colors: { ...defaultEnvironmentTheme.colors, ...response.colors }
+            });
         });
     }, []);
 
@@ -213,7 +230,11 @@ const SetConfiguration = forwardRef<ProcessRef, ProcessProps>(function SetConfig
             key: STORAGE_ForegroundPanes,
             configurations: isForegroundPanes
         });
-    }, [isForegroundPanes, processesList]);
+        MessageManager.sendMessage(MessageType.SETCONFIGURATION, {
+            key: STORAGE_EnvironmentTheme,
+            configurations: environmentTheme
+        });
+    }, [environmentTheme, isForegroundPanes, processesList]);
 
     const saveConfiguration = useCallback(() => {
         debugLog("saveConfiguration", processesList);
@@ -424,6 +445,96 @@ const SetConfiguration = forwardRef<ProcessRef, ProcessProps>(function SetConfig
                     }}
                 />
             </HelpInfo>
+
+            <Divider />
+
+            <HelpInfo
+                placement="left"
+                arrow
+                disableInteractive
+                title={
+                    <Typography variant="body2">
+                        Colour the extension panel according to the environment type, so a Production environment is
+                        not mistaken for a Sandbox. An environment that cannot be identified uses the Production
+                        colour.
+                    </Typography>
+                }>
+                <FormControl fullWidth sx={{ pl: 2 }}>
+                    <FormControlLabel
+                        control={
+                            <Switch
+                                checked={environmentTheme.enabled}
+                                onChange={() => setEnvironmentTheme((prev) => ({ ...prev, enabled: !prev.enabled }))}
+                            />
+                        }
+                        label="Environment Colours"
+                    />
+                </FormControl>
+            </HelpInfo>
+
+            {environmentTheme.enabled && (
+                <Stack direction="column" pl={2}>
+                    <FormControlLabel
+                        control={
+                            <Switch
+                                size="small"
+                                checked={environmentTheme.tintPanel}
+                                onChange={() =>
+                                    setEnvironmentTheme((prev) => ({ ...prev, tintPanel: !prev.tintPanel }))
+                                }
+                            />
+                        }
+                        label={<Typography variant="body2">Tint the tools bar</Typography>}
+                    />
+                    <FormControlLabel
+                        control={
+                            <Switch
+                                size="small"
+                                checked={environmentTheme.showLabel}
+                                onChange={() =>
+                                    setEnvironmentTheme((prev) => ({ ...prev, showLabel: !prev.showLabel }))
+                                }
+                            />
+                        }
+                        label={<Typography variant="body2">Show the environment type</Typography>}
+                    />
+                    <FormControlLabel
+                        control={
+                            <Switch
+                                size="small"
+                                checked={environmentTheme.pageBorder}
+                                onChange={() =>
+                                    setEnvironmentTheme((prev) => ({ ...prev, pageBorder: !prev.pageBorder }))
+                                }
+                            />
+                        }
+                        label={<Typography variant="body2">Border around the Dynamics page</Typography>}
+                    />
+
+                    {Object.values(EnvironmentType).map((environmentType) => (
+                        <Stack
+                            key={`environmentColor_${environmentType}`}
+                            direction="row"
+                            spacing={2}
+                            alignItems="center"
+                            justifyContent="space-between"
+                            pr={1}>
+                            <Typography variant="body2">{environmentType}</Typography>
+                            <input
+                                type="color"
+                                value={environmentTheme.colors[environmentType]}
+                                onChange={(event) => {
+                                    const color = event.target.value;
+                                    setEnvironmentTheme((prev) => ({
+                                        ...prev,
+                                        colors: { ...prev.colors, [environmentType]: color }
+                                    }));
+                                }}
+                            />
+                        </Stack>
+                    ))}
+                </Stack>
+            )}
 
             <Divider />
 

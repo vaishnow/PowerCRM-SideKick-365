@@ -7,14 +7,17 @@ import GitHubIcon from "@mui/icons-material/GitHub";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import StarIcon from "@mui/icons-material/Star";
 import {
+    alpha,
     Badge,
     Box,
     Button,
+    createTheme,
     Divider,
     Drawer,
     IconButton,
     Paper,
     StyledEngineProvider,
+    ThemeProvider,
     Tooltip,
     Typography
 } from "@mui/material";
@@ -34,6 +37,13 @@ import OpenOptionsButton from "../utils/components/OpenOptionsButton";
 import PanelDrawerItem from "../utils/components/PanelDrawer/PanelDrawerItem";
 import { debugLog, getBridgeEventName, GetExtensionId, isArraysEquals, setStyle } from "../utils/global/common";
 import MessageManager from "../utils/global/MessageManager";
+import {
+    defaultEnvironmentTheme,
+    EnvironmentType,
+    STORAGE_EnvironmentTheme,
+    type EnvironmentInfo,
+    type TYPE_EnvironmentTheme
+} from "../utils/global/environmentType";
 import SpDevToolsContextProvider, { useSpDevTools } from "../utils/global/spContext";
 import {
     APPLICATION_NAME,
@@ -42,23 +52,60 @@ import {
     STORAGE_ForegroundPanes,
     STORAGE_ListName
 } from "../utils/global/var";
+import { useEnvironment } from "../utils/hooks/use/useEnvironment";
 import { MessageType } from "../utils/types/Message";
 import { defaultToolList, getToolButton } from "./buttonList";
 
 export const MainScreen: React.FunctionComponent = () => {
+    const environment = useEnvironment();
+    const [environmentTheme, setEnvironmentTheme] = useState<TYPE_EnvironmentTheme>(defaultEnvironmentTheme);
+
+    useEffect(() => {
+        MessageManager.sendMessage(MessageType.GETCONFIGURATION, {
+            key: STORAGE_EnvironmentTheme
+        }).then(function (response: TYPE_EnvironmentTheme | null) {
+            if (!response) return;
+            setEnvironmentTheme({
+                ...defaultEnvironmentTheme,
+                ...response,
+                colors: { ...defaultEnvironmentTheme.colors, ...response.colors }
+            });
+        });
+    }, []);
+
+    // Until the environment is known it is treated as Unknown, which is coloured like Production.
+    const environmentColor = useMemo(
+        () =>
+            environmentTheme.enabled
+                ? environmentTheme.colors[environment?.type ?? EnvironmentType.Unknown]
+                : null,
+        [environmentTheme, environment]
+    );
+
+    const theme = useMemo(
+        () => (environmentColor ? createTheme({ palette: { primary: { main: environmentColor } } }) : createTheme()),
+        [environmentColor]
+    );
+
     return (
         // <React.StrictMode>
         <StyledEngineProvider injectFirst>
-            <SnackbarProvider
-                dense
-                maxSnack={5}
-                Components={{
-                    detailsFile: DetailsSnackbar
-                }}>
-                <SpDevToolsContextProvider>
-                    <MainScreenCustomPanel />
-                </SpDevToolsContextProvider>
-            </SnackbarProvider>
+            <ThemeProvider theme={theme}>
+                <SnackbarProvider
+                    dense
+                    maxSnack={5}
+                    Components={{
+                        detailsFile: DetailsSnackbar
+                    }}>
+                    <SpDevToolsContextProvider>
+                        <MainScreenCustomPanel
+                            environment={environment}
+                            environmentTheme={environmentTheme}
+                            environmentColor={environmentColor}
+                        />
+                    </SpDevToolsContextProvider>
+                </SnackbarProvider>
+            </ThemeProvider>
         </StyledEngineProvider>
         // </React.StrictMode>
     );
@@ -67,7 +114,17 @@ export const MainScreen: React.FunctionComponent = () => {
 const DRAWER_BUTTON_CONTAINER_WIDTH = 47;
 const MAIN_MENU_WIDTH = 322;
 
-const MainScreenCustomPanel: React.FunctionComponent = () => {
+type MainScreenCustomPanelProps = {
+    environment: EnvironmentInfo | null;
+    environmentTheme: TYPE_EnvironmentTheme;
+    environmentColor: string | null;
+};
+
+const MainScreenCustomPanel: React.FunctionComponent<MainScreenCustomPanelProps> = (
+    props: MainScreenCustomPanelProps
+) => {
+    const { environment, environmentTheme, environmentColor } = props;
+
     const [isMainDrawerOpened, setIsMainDrawerOpened] = useState<boolean>(true);
 
     const [panelOpenedId, setPanelOpenedId] = useState<string | null>(null);
@@ -139,6 +196,13 @@ const MainScreenCustomPanel: React.FunctionComponent = () => {
         setPageStyle();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [panelOpenedId, isForegroundPanes, isMainDrawerOpened]);
+
+    useEffect(() => {
+        const borderColor = environmentColor && environmentTheme.pageBorder ? environmentColor : "transparent";
+        setStyle(document, "environmenttypeborder", {
+            "#ApplicationShell": [`border: 3px solid ${borderColor}`, "box-sizing: border-box"]
+        });
+    }, [environmentColor, environmentTheme.pageBorder]);
 
     useEffect(() => {
         if (panelOpenedId && openedProcesses[panelOpenedId] && !openedProcesses[panelOpenedId].isPanelProcess) {
@@ -261,7 +325,10 @@ const MainScreenCustomPanel: React.FunctionComponent = () => {
                 PaperProps={{
                     sx: {
                         width: DRAWER_BUTTON_CONTAINER_WIDTH,
-                        bgcolor: "background.paper"
+                        bgcolor:
+                            environmentColor && environmentTheme.tintPanel
+                                ? alpha(environmentColor, 0.08)
+                                : "background.paper"
                         // backgroundColor: "rgb(246,247,248)"
                     }
                 }}
@@ -269,7 +336,19 @@ const MainScreenCustomPanel: React.FunctionComponent = () => {
                 <Stack direction="column" justifyContent="space-between" height="100%" pb={6}>
                     <Stack direction="column">
                         <Tooltip
-                            title={<Typography variant="h6">{APPLICATION_NAME}</Typography>}
+                            title={
+                                <Stack direction="column">
+                                    <Typography variant="h6">{APPLICATION_NAME}</Typography>
+                                    {environment && (
+                                        <>
+                                            <Typography variant="body2">{environment.friendlyName}</Typography>
+                                            <Typography variant="body2">
+                                                {environment.type} - v{environment.version}
+                                            </Typography>
+                                        </>
+                                    )}
+                                </Stack>
+                            }
                             placement="left"
                             disableInteractive>
                             <Button
@@ -284,6 +363,19 @@ const MainScreenCustomPanel: React.FunctionComponent = () => {
                                 <WandMainIcon sx={{ fontSize: 25 }} />
                             </Button>
                         </Tooltip>
+
+                        {environmentColor && environmentTheme.showLabel && (
+                            <Typography
+                                variant="caption"
+                                textAlign="center"
+                                color={environmentColor}
+                                fontWeight="bold"
+                                lineHeight={1}
+                                py={0.5}
+                                sx={{ writingMode: "vertical-rl", alignSelf: "center" }}>
+                                {(environment?.type ?? EnvironmentType.Unknown).toUpperCase()}
+                            </Typography>
+                        )}
 
                         <Divider />
 
