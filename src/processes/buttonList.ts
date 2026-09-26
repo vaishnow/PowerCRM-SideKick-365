@@ -3,6 +3,7 @@ import { ToolPanelButton } from "~utils/global/.toolPanelButton";
 import { type StorageConfiguration } from "../utils/types/StorageConfiguration";
 import allFields from "./allFields/button";
 import commandDebugger from "./commandDebugger/button";
+import customApiRunner from "./customApiRunner/button";
 import dirtyFields from "./dirtyFields/button";
 import entitiesList from "./entitiesList/button";
 import formFlags from "./formFlags/button";
@@ -36,6 +37,7 @@ export const ToolPanelButtonList: ToolPanelButton[] = [
     new commandDebugger(),
     new formFlags(),
     new workflowExplorer(),
+    new customApiRunner(),
     new createConfiguration()
 ];
 
