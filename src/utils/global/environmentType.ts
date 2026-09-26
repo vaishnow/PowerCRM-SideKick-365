@@ -12,7 +12,9 @@ export enum EnvironmentType {
 export type EnvironmentInfo = {
     type: EnvironmentType;
     friendlyName: string;
+    uniqueName: string;
     version: string;
+    url: string;
 };
 
 const organizationTypeMap: { [organizationType: string]: EnvironmentType } = {
@@ -59,7 +61,9 @@ export async function retrieveEnvironment(): Promise<EnvironmentInfo> {
         return {
             type: organizationTypeMap[detail?.OrganizationType] ?? EnvironmentType.Unknown,
             friendlyName: detail?.FriendlyName ?? globalContext.organizationSettings.uniqueName,
-            version: detail?.OrganizationVersion ?? globalContext.getVersion()
+            uniqueName: detail?.UniqueName ?? globalContext.organizationSettings.uniqueName,
+            version: detail?.OrganizationVersion ?? globalContext.getVersion(),
+            url: globalContext.getClientUrl()
         };
     } catch (error) {
         debugError("retrieveEnvironment", error);
@@ -69,30 +73,75 @@ export async function retrieveEnvironment(): Promise<EnvironmentInfo> {
                 ? EnvironmentType.Trial
                 : EnvironmentType.Unknown,
             friendlyName: globalContext.organizationSettings.uniqueName,
-            version: globalContext.getVersion()
+            uniqueName: globalContext.organizationSettings.uniqueName,
+            version: globalContext.getVersion(),
+            url: globalContext.getClientUrl()
         };
     }
 }
 
 export const STORAGE_EnvironmentTheme = "environmentTheme";
+
+export type EnvironmentStyle = {
+    color: string;
+    label: string;
+};
+/** Dataverse cannot distinguish a staging org from any other sandbox, so naming conventions are matched instead. */
+export type EnvironmentRule = EnvironmentStyle & {
+    id: string;
+    match: string;
+};
+
 export type TYPE_EnvironmentTheme = {
     enabled: boolean;
     tintPanel: boolean;
     pageBorder: boolean;
     showLabel: boolean;
-    colors: { [key in EnvironmentType]: string };
+    types: { [key in EnvironmentType]: EnvironmentStyle };
+    rules: EnvironmentRule[];
 };
+
 export const defaultEnvironmentTheme: TYPE_EnvironmentTheme = {
     enabled: true,
     tintPanel: true,
     pageBorder: false,
     showLabel: true,
-    colors: {
-        [EnvironmentType.Production]: "#c62828",
-        [EnvironmentType.Sandbox]: "#ef6c00",
-        [EnvironmentType.Trial]: "#6a1b9a",
-        [EnvironmentType.Developer]: "#1565c0",
-        [EnvironmentType.Default]: "#616161",
-        [EnvironmentType.Unknown]: "#c62828"
-    }
+    types: {
+        [EnvironmentType.Production]: { color: "#c62828", label: "PROD" },
+        [EnvironmentType.Sandbox]: { color: "#1565c0", label: "SANDBOX" },
+        [EnvironmentType.Trial]: { color: "#6a1b9a", label: "TRIAL" },
+        [EnvironmentType.Developer]: { color: "#00695c", label: "DEV" },
+        [EnvironmentType.Default]: { color: "#616161", label: "DEFAULT" },
+        [EnvironmentType.Unknown]: { color: "#c62828", label: "UNKNOWN" }
+    },
+    // "stg" is not contained in "staging", so both are seeded.
+    rules: [
+        { id: "staging-stg", match: "stg", color: "#546e7a", label: "STAGING" },
+        { id: "staging-staging", match: "staging", color: "#546e7a", label: "STAGING" }
+    ]
 };
+
+/**
+ * A matching rule wins over the detected type. The environment is Unknown while the detection
+ * request is still in flight, which is coloured like Production on purpose.
+ */
+export function resolveEnvironmentStyle(
+    theme: TYPE_EnvironmentTheme,
+    environment: EnvironmentInfo | null
+): EnvironmentStyle | null {
+    if (!theme.enabled) {
+        return null;
+    }
+
+    if (environment) {
+        const haystack = `${environment.friendlyName} ${environment.uniqueName} ${environment.url}`.toLowerCase();
+        const matchedRule = theme.rules.find(
+            (rule) => rule.match.trim() !== "" && haystack.includes(rule.match.trim().toLowerCase())
+        );
+        if (matchedRule) {
+            return matchedRule;
+        }
+    }
+
+    return theme.types[environment?.type ?? EnvironmentType.Unknown];
+}

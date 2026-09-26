@@ -1,4 +1,5 @@
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
+import DeleteIcon from "@mui/icons-material/Delete";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import SettingsIcon from "@mui/icons-material/Settings";
 import Alert from "@mui/material/Alert";
@@ -8,6 +9,7 @@ import Button from "@mui/material/Button";
 import Divider from "@mui/material/Divider";
 import FormControl from "@mui/material/FormControl";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import IconButton from "@mui/material/IconButton";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Switch from "@mui/material/Switch";
@@ -23,6 +25,7 @@ import {
     defaultEnvironmentTheme,
     EnvironmentType,
     STORAGE_EnvironmentTheme,
+    type EnvironmentRule,
     type TYPE_EnvironmentTheme
 } from "../../utils/global/environmentType";
 import { STORAGE_ForegroundPanes, STORAGE_ListName } from "../../utils/global/var";
@@ -201,7 +204,7 @@ const SetConfiguration = forwardRef<ProcessRef, ProcessProps>(function SetConfig
             setEnvironmentTheme({
                 ...defaultEnvironmentTheme,
                 ...response,
-                colors: { ...defaultEnvironmentTheme.colors, ...response.colors }
+                types: { ...defaultEnvironmentTheme.types, ...response.types }
             });
         });
     }, []);
@@ -511,28 +514,130 @@ const SetConfiguration = forwardRef<ProcessRef, ProcessProps>(function SetConfig
                         label={<Typography variant="body2">Border around the Dynamics page</Typography>}
                     />
 
+                    <Typography variant="caption" pt={1}>
+                        Detected environment types
+                    </Typography>
                     {Object.values(EnvironmentType).map((environmentType) => (
                         <Stack
-                            key={`environmentColor_${environmentType}`}
+                            key={`environmentType_${environmentType}`}
                             direction="row"
-                            spacing={2}
+                            spacing={1}
                             alignItems="center"
-                            justifyContent="space-between"
                             pr={1}>
-                            <Typography variant="body2">{environmentType}</Typography>
+                            <Typography variant="body2" width="40%" noWrap>
+                                {environmentType}
+                            </Typography>
+                            <TextField
+                                size="small"
+                                fullWidth
+                                value={environmentTheme.types[environmentType].label}
+                                onChange={(event) => {
+                                    const label = event.target.value;
+                                    setEnvironmentTheme((prev) => ({
+                                        ...prev,
+                                        types: {
+                                            ...prev.types,
+                                            [environmentType]: { ...prev.types[environmentType], label: label }
+                                        }
+                                    }));
+                                }}
+                            />
                             <input
                                 type="color"
-                                value={environmentTheme.colors[environmentType]}
+                                value={environmentTheme.types[environmentType].color}
                                 onChange={(event) => {
                                     const color = event.target.value;
                                     setEnvironmentTheme((prev) => ({
                                         ...prev,
-                                        colors: { ...prev.colors, [environmentType]: color }
+                                        types: {
+                                            ...prev.types,
+                                            [environmentType]: { ...prev.types[environmentType], color: color }
+                                        }
                                     }));
                                 }}
                             />
                         </Stack>
                     ))}
+
+                    <HelpInfo
+                        placement="left"
+                        arrow
+                        disableInteractive
+                        title={
+                            <Typography variant="body2">
+                                Dynamics cannot tell a staging environment apart from any other sandbox. A rule
+                                matches its text anywhere in the environment name or url, and the first matching rule
+                                wins over the detected type. The tools bar tooltip keeps showing the real type.
+                            </Typography>
+                        }>
+                        <Typography variant="caption" pt={1}>
+                            Name matching rules
+                        </Typography>
+                    </HelpInfo>
+                    {environmentTheme.rules.map((rule) => (
+                        <Stack key={`environmentRule_${rule.id}`} direction="row" spacing={1} alignItems="center">
+                            <TextField
+                                size="small"
+                                fullWidth
+                                label="Match"
+                                value={rule.match}
+                                onChange={(event) => {
+                                    const match = event.target.value;
+                                    setEnvironmentTheme((prev) => ({
+                                        ...prev,
+                                        rules: prev.rules.map((r) => (r.id === rule.id ? { ...r, match: match } : r))
+                                    }));
+                                }}
+                            />
+                            <TextField
+                                size="small"
+                                fullWidth
+                                label="Text"
+                                value={rule.label}
+                                onChange={(event) => {
+                                    const label = event.target.value;
+                                    setEnvironmentTheme((prev) => ({
+                                        ...prev,
+                                        rules: prev.rules.map((r) => (r.id === rule.id ? { ...r, label: label } : r))
+                                    }));
+                                }}
+                            />
+                            <input
+                                type="color"
+                                value={rule.color}
+                                onChange={(event) => {
+                                    const color = event.target.value;
+                                    setEnvironmentTheme((prev) => ({
+                                        ...prev,
+                                        rules: prev.rules.map((r) => (r.id === rule.id ? { ...r, color: color } : r))
+                                    }));
+                                }}
+                            />
+                            <IconButton
+                                size="small"
+                                onClick={() =>
+                                    setEnvironmentTheme((prev) => ({
+                                        ...prev,
+                                        rules: prev.rules.filter((r) => r.id !== rule.id)
+                                    }))
+                                }>
+                                <DeleteIcon fontSize="small" />
+                            </IconButton>
+                        </Stack>
+                    ))}
+                    <Button
+                        size="small"
+                        onClick={() => {
+                            const newRule: EnvironmentRule = {
+                                id: crypto.randomUUID(),
+                                match: "",
+                                label: "",
+                                color: "#616161"
+                            };
+                            setEnvironmentTheme((prev) => ({ ...prev, rules: [...prev.rules, newRule] }));
+                        }}>
+                        Add rule
+                    </Button>
                 </Stack>
             )}
 

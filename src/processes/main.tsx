@@ -39,9 +39,10 @@ import { debugLog, getBridgeEventName, GetExtensionId, isArraysEquals, setStyle 
 import MessageManager from "../utils/global/MessageManager";
 import {
     defaultEnvironmentTheme,
-    EnvironmentType,
+    resolveEnvironmentStyle,
     STORAGE_EnvironmentTheme,
     type EnvironmentInfo,
+    type EnvironmentStyle,
     type TYPE_EnvironmentTheme
 } from "../utils/global/environmentType";
 import SpDevToolsContextProvider, { useSpDevTools } from "../utils/global/spContext";
@@ -68,23 +69,22 @@ export const MainScreen: React.FunctionComponent = () => {
             setEnvironmentTheme({
                 ...defaultEnvironmentTheme,
                 ...response,
-                colors: { ...defaultEnvironmentTheme.colors, ...response.colors }
+                types: { ...defaultEnvironmentTheme.types, ...response.types }
             });
         });
     }, []);
 
-    // Until the environment is known it is treated as Unknown, which is coloured like Production.
-    const environmentColor = useMemo(
-        () =>
-            environmentTheme.enabled
-                ? environmentTheme.colors[environment?.type ?? EnvironmentType.Unknown]
-                : null,
+    const environmentStyle = useMemo(
+        () => resolveEnvironmentStyle(environmentTheme, environment),
         [environmentTheme, environment]
     );
 
     const theme = useMemo(
-        () => (environmentColor ? createTheme({ palette: { primary: { main: environmentColor } } }) : createTheme()),
-        [environmentColor]
+        () =>
+            environmentStyle
+                ? createTheme({ palette: { primary: { main: environmentStyle.color } } })
+                : createTheme(),
+        [environmentStyle]
     );
 
     return (
@@ -101,7 +101,7 @@ export const MainScreen: React.FunctionComponent = () => {
                         <MainScreenCustomPanel
                             environment={environment}
                             environmentTheme={environmentTheme}
-                            environmentColor={environmentColor}
+                            environmentStyle={environmentStyle}
                         />
                     </SpDevToolsContextProvider>
                 </SnackbarProvider>
@@ -117,13 +117,13 @@ const MAIN_MENU_WIDTH = 322;
 type MainScreenCustomPanelProps = {
     environment: EnvironmentInfo | null;
     environmentTheme: TYPE_EnvironmentTheme;
-    environmentColor: string | null;
+    environmentStyle: EnvironmentStyle | null;
 };
 
 const MainScreenCustomPanel: React.FunctionComponent<MainScreenCustomPanelProps> = (
     props: MainScreenCustomPanelProps
 ) => {
-    const { environment, environmentTheme, environmentColor } = props;
+    const { environment, environmentTheme, environmentStyle } = props;
 
     const [isMainDrawerOpened, setIsMainDrawerOpened] = useState<boolean>(true);
 
@@ -198,11 +198,11 @@ const MainScreenCustomPanel: React.FunctionComponent<MainScreenCustomPanelProps>
     }, [panelOpenedId, isForegroundPanes, isMainDrawerOpened]);
 
     useEffect(() => {
-        const borderColor = environmentColor && environmentTheme.pageBorder ? environmentColor : "transparent";
+        const borderColor = environmentStyle && environmentTheme.pageBorder ? environmentStyle.color : "transparent";
         setStyle(document, "environmenttypeborder", {
             "#ApplicationShell": [`border: 3px solid ${borderColor}`, "box-sizing: border-box"]
         });
-    }, [environmentColor, environmentTheme.pageBorder]);
+    }, [environmentStyle, environmentTheme.pageBorder]);
 
     useEffect(() => {
         if (panelOpenedId && openedProcesses[panelOpenedId] && !openedProcesses[panelOpenedId].isPanelProcess) {
@@ -326,8 +326,8 @@ const MainScreenCustomPanel: React.FunctionComponent<MainScreenCustomPanelProps>
                     sx: {
                         width: DRAWER_BUTTON_CONTAINER_WIDTH,
                         bgcolor:
-                            environmentColor && environmentTheme.tintPanel
-                                ? alpha(environmentColor, 0.08)
+                            environmentStyle && environmentTheme.tintPanel
+                                ? alpha(environmentStyle.color, 0.08)
                                 : "background.paper"
                         // backgroundColor: "rgb(246,247,248)"
                     }
@@ -364,16 +364,16 @@ const MainScreenCustomPanel: React.FunctionComponent<MainScreenCustomPanelProps>
                             </Button>
                         </Tooltip>
 
-                        {environmentColor && environmentTheme.showLabel && (
+                        {environmentStyle && environmentTheme.showLabel && (
                             <Typography
                                 variant="caption"
                                 textAlign="center"
-                                color={environmentColor}
+                                color={environmentStyle.color}
                                 fontWeight="bold"
                                 lineHeight={1}
                                 py={0.5}
                                 sx={{ writingMode: "vertical-rl", alignSelf: "center" }}>
-                                {(environment?.type ?? EnvironmentType.Unknown).toUpperCase()}
+                                {environmentStyle.label}
                             </Typography>
                         )}
 
