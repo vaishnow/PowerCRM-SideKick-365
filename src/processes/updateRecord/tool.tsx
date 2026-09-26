@@ -1,10 +1,12 @@
 import DeleteIcon from "@mui/icons-material/Delete";
+import PersonIcon from "@mui/icons-material/Person";
 import RestoreIcon from "@mui/icons-material/Restore";
 import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import SettingsIcon from "@mui/icons-material/Settings";
 import Autocomplete, { createFilterOptions } from "@mui/material/Autocomplete";
 import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
+import Checkbox from "@mui/material/Checkbox";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
@@ -15,6 +17,8 @@ import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import { createTheme, lighten, StyledEngineProvider, useTheme } from "@mui/material/styles";
 import TextField from "@mui/material/TextField";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import ThemeProvider from "@mui/styles/ThemeProvider";
@@ -42,8 +46,11 @@ import { useSpDevTools } from "../../utils/global/spContext";
 import { useDictionnary } from "../../utils/hooks/use/useDictionnary";
 import { useFormContextDocument } from "../../utils/hooks/use/useFormContextDocument";
 import { useXrmUpdated } from "../../utils/hooks/use/useXrmUpdated";
+import { RetrieveActiveUsersWithSecurityRoles } from "../../utils/hooks/XrmApi/RetrieveActiveUsersWithSecurityRoles";
 import { RetrieveAttributes } from "../../utils/hooks/XrmApi/RetrieveAttributes";
 import { RetrieveAttributesMetaData } from "../../utils/hooks/XrmApi/RetrieveAttributesMetaData";
+import { RetrieveSetName } from "../../utils/hooks/XrmApi/RetrieveSetName";
+import type { ActiveUser } from "../../utils/types/ActiveUser";
 import { getReadableMSType, MSDateFormat, MSType, type AttributeMetadata } from "../../utils/types/requestsType";
 import {
     BigIntNode,
@@ -62,6 +69,7 @@ import {
     StringNode,
     type AttributeProps
 } from "./nodes";
+import { defaultWriteSettings, writeCreate, writeUpdate, type WriteSettings } from "./writeRecord";
 import { useUpdateEffect } from "@custom-react-hooks/all";
 import DetailsSnackbar from "~utils/components/DetailsSnackbar";
 import { PROJECT_PREFIX } from "~utils/global/var";
@@ -98,6 +106,7 @@ const UpdateRecordContainer = forwardRef<ProcessRef, ProcessProps>(function Upda
 });
 
 type AvailableModes = "update" | "create";
+type BypassOptions = { customSync: boolean; customAsync: boolean; duplicateDetection: boolean; flows: boolean };
 
 const UpdateRecord = forwardRef<ProcessRef, ProcessProps>(function UpdateRecord(
     _props: ProcessProps,
@@ -129,6 +138,28 @@ const UpdateRecord = forwardRef<ProcessRef, ProcessProps>(function UpdateRecord(
     const { value: resetEntity, toggle: toggleResetEntity } = useBoolean(false);
 
     const [selectedMode, setSelectedMode] = useState<AvailableModes>("create");
+
+    const [writeMethod, setWriteMethod] = useState<WriteSettings["method"]>(defaultWriteSettings.method);
+    const [bypass, setBypass] = useState<BypassOptions>({
+        customSync: defaultWriteSettings.bypassCustomSync,
+        customAsync: defaultWriteSettings.bypassCustomAsync,
+        duplicateDetection: defaultWriteSettings.suppressDuplicateDetection,
+        flows: defaultWriteSettings.suppressFlows
+    });
+    const [impersonateUser, setImpersonateUser] = useState<ActiveUser | null>(defaultWriteSettings.impersonateUser);
+    const setName = RetrieveSetName(entityName);
+
+    const writeSettings = useMemo<WriteSettings>(
+        () => ({
+            method: writeMethod,
+            bypassCustomSync: bypass.customSync,
+            bypassCustomAsync: bypass.customAsync,
+            suppressDuplicateDetection: bypass.duplicateDetection,
+            suppressFlows: bypass.flows,
+            impersonateUser
+        }),
+        [writeMethod, bypass, impersonateUser]
+    );
 
     const setEntityname = (entityname: string) => {
         setRecordsIds([]);
@@ -180,7 +211,7 @@ const UpdateRecord = forwardRef<ProcessRef, ProcessProps>(function UpdateRecord(
         Xrm.Utility.showProgressIndicator(`Updating ${recordsIds.length} ${entityName}`);
 
         recordsIds.forEach((recordid) => {
-            Xrm.WebApi.online.updateRecord(entityName, recordid, attributesValues).then(
+            writeUpdate(entityName, setName, recordid, attributesValues, writeSettings).then(
                 function success(_result) {
                     Xrm.Utility.closeProgressIndicator();
                     enqueueSnackbar(entityName + " " + recordid + " updated.", { variant: "success" });
@@ -206,7 +237,15 @@ const UpdateRecord = forwardRef<ProcessRef, ProcessProps>(function UpdateRecord(
                 }
             );
         });
-    }, [attributesValueKeys.length, attributesValues, enqueueSnackbar, entityName, recordsIds]);
+    }, [
+        attributesValueKeys.length,
+        attributesValues,
+        enqueueSnackbar,
+        entityName,
+        recordsIds,
+        setName,
+        writeSettings
+    ]);
 
     const launchCreate = useCallback(() => {
         debugLog("Launch Create for", entityName, "with", attributesValues);
@@ -214,7 +253,7 @@ const UpdateRecord = forwardRef<ProcessRef, ProcessProps>(function UpdateRecord(
         if (attributesValueKeys.length === 0) return;
 
         Xrm.Utility.showProgressIndicator("Creating " + entityName);
-        Xrm.WebApi.online.createRecord(entityName, attributesValues).then(
+        writeCreate(entityName, setName, attributesValues, writeSettings).then(
             function success(result) {
                 Xrm.Utility.closeProgressIndicator();
                 setRecordsIds([result.id]);
@@ -240,7 +279,7 @@ const UpdateRecord = forwardRef<ProcessRef, ProcessProps>(function UpdateRecord(
                 console.error(error.message);
             }
         );
-    }, [attributesValueKeys.length, attributesValues, enqueueSnackbar, entityName]);
+    }, [attributesValueKeys.length, attributesValues, enqueueSnackbar, entityName, setName, writeSettings]);
 
     return (
         <Stack spacing={0.5} width="-webkit-fill-available" padding="10px" height="calc(100% - 10px)">
@@ -254,6 +293,12 @@ const UpdateRecord = forwardRef<ProcessRef, ProcessProps>(function UpdateRecord(
                 entityname={entityName}
                 recordsIds={recordsIds}
                 setMode={(mode: AvailableModes) => setSelectedMode(mode)}
+                writeMethod={writeMethod}
+                setWriteMethod={setWriteMethod}
+                bypass={bypass}
+                setBypass={setBypass}
+                impersonateUser={impersonateUser}
+                setImpersonateUser={setImpersonateUser}
             />
             <Divider />
             <AttributesList
@@ -756,8 +801,47 @@ type NavBarProps = {
     entityname: string;
     recordsIds: string[];
     setMode: (mode: AvailableModes) => void;
+    writeMethod: WriteSettings["method"];
+    setWriteMethod: Dispatch<SetStateAction<WriteSettings["method"]>>;
+    bypass: BypassOptions;
+    setBypass: Dispatch<SetStateAction<BypassOptions>>;
+    impersonateUser: ActiveUser | null;
+    setImpersonateUser: Dispatch<SetStateAction<ActiveUser | null>>;
 };
+
+const bypassOptionsLabels: { key: keyof BypassOptions; label: string }[] = [
+    { key: "customSync", label: "Sync custom logic" },
+    { key: "customAsync", label: "Async custom logic" },
+    { key: "duplicateDetection", label: "Duplicate detection" },
+    { key: "flows", label: "Power Automate flows" }
+];
+
+function ImpersonationPicker(props: {
+    impersonateUser: ActiveUser | null;
+    setImpersonateUser: Dispatch<SetStateAction<ActiveUser | null>>;
+}) {
+    const { impersonateUser, setImpersonateUser } = props;
+    const isOnPrem = useMemo(() => (Xrm.Utility.getGlobalContext() as any).isOnPremises(), []);
+    const { activeUsers, isFetching } = RetrieveActiveUsersWithSecurityRoles(!isOnPrem);
+
+    return (
+        <Autocomplete
+            size="small"
+            fullWidth
+            options={activeUsers}
+            loading={isFetching}
+            value={impersonateUser}
+            onChange={(_event, value) => setImpersonateUser(value)}
+            getOptionLabel={(user) => user.fullname ?? user.systemuserid}
+            isOptionEqualToValue={(option, value) => option.systemuserid === value.systemuserid}
+            renderInput={(params) => <TextField {...params} label="Impersonate" />}
+        />
+    );
+}
+
 function NavTopBar(props: NavBarProps) {
+    const isLegacy = props.writeMethod === "legacy";
+    const { value: isImpersonationOpen, toggle: toggleImpersonation } = useBoolean(false);
     return (
         <Stack key="topbar" spacing={0.5} width="100%">
             <RecordSearchBar
@@ -768,6 +852,55 @@ function NavTopBar(props: NavBarProps) {
                 recordIds={props.recordsIds}
                 multiple
             />
+
+            <Stack direction="row" key="writemethod" spacing={1} width="100%" alignItems="center" whiteSpace="nowrap">
+                <ToggleButtonGroup
+                    exclusive
+                    size="small"
+                    value={props.writeMethod}
+                    onChange={(_event, method: WriteSettings["method"] | null) =>
+                        method && props.setWriteMethod(method)
+                    }>
+                    <ToggleButton value="legacy">Legacy</ToggleButton>
+                    <ToggleButton value="new">New</ToggleButton>
+                </ToggleButtonGroup>
+
+                <DropDownButton
+                    variant="outlined"
+                    title="Bypass"
+                    sx={{ opacity: isLegacy ? 0.5 : 1 }}
+                    options={bypassOptionsLabels.map(({ key, label }) => ({
+                        id: key,
+                        disabled: isLegacy,
+                        title: (
+                            <Stack direction="row" spacing={1} alignItems="center">
+                                <Checkbox size="small" checked={props.bypass[key]} sx={{ p: 0 }} />
+                                <span>{label}</span>
+                            </Stack>
+                        ),
+                        onClick: () => props.setBypass((current) => ({ ...current, [key]: !current[key] }))
+                    }))}
+                />
+
+                <Tooltip title="Per request impersonation. Global Impersonation overrides this, turn it off first.">
+                    <span>
+                        <IconButton
+                            size="small"
+                            color={props.impersonateUser ? "primary" : "default"}
+                            disabled={isLegacy}
+                            onClick={toggleImpersonation}>
+                            <PersonIcon />
+                        </IconButton>
+                    </span>
+                </Tooltip>
+            </Stack>
+
+            {!isLegacy && isImpersonationOpen && (
+                <ImpersonationPicker
+                    impersonateUser={props.impersonateUser}
+                    setImpersonateUser={props.setImpersonateUser}
+                />
+            )}
 
             <Stack direction={"row"} key="refreshandlaunch" spacing={3} width="100%" whiteSpace="nowrap">
                 <Stack direction="row" spacing={0.5} alignItems="center" width="100%">
