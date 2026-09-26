@@ -39,6 +39,7 @@ import {
 import {
     type PickListOption, RetrievePicklistValues
 } from '../../utils/hooks/XrmApi/RetrievePicklistValues';
+import { RetrieveLookupNavigationProperties } from '../../utils/hooks/XrmApi/RetrieveLookupNavigationProperties';
 import { RetrieveSetName } from '../../utils/hooks/XrmApi/RetrieveSetName';
 import { createSvgIcon, type Theme } from '@mui/material';
 import { useUpdateEffect } from '@custom-react-hooks/all';
@@ -62,12 +63,35 @@ export type AttributeProps = {
     attributeToUpdateManager: { setAttributesValue: (key: string, value: any) => void, removeAttributesValue: (key: string) => void }
 }
 
-export function LookupNode(props: AttributeProps & { theme: Theme }) {
+export function LookupNode(props: AttributeProps & { theme: Theme, entityname: string, valueTarget?: string }) {
     const [oldValue, setOldValue] = useState<string[]>(props.value ? [props.value] : []);
     const [value, setValue] = useState<string[]>(props.value ? [props.value] : []);
     const [updatingValue, setUpdatingValue] = useState<string[]>([]);
 
-    const pluralName = RetrieveSetName(props.attribute.Parameters.Target);
+    const targets = useMemo(
+        () => props.attribute.Parameters.Targets?.length
+            ? props.attribute.Parameters.Targets
+            : [props.attribute.Parameters.Target],
+        [props.attribute.Parameters.Target, props.attribute.Parameters.Targets]
+    );
+    // The existing value can point at any of the targets, so follow its annotated target when there is one.
+    const [target, setTarget] = useState<string>(props.valueTarget ?? targets.at(0)!);
+    const isPolymorphic = targets.length > 1;
+
+    useUpdateEffect(() => {
+        if (props.valueTarget) setTarget(props.valueTarget);
+    }, [props.valueTarget]);
+
+    // Polymorphic lookups bind on a target-qualified navigation property, not on the logical name.
+    const navigationProperties = RetrieveLookupNavigationProperties(
+        isPolymorphic ? props.entityname : "",
+        props.attribute.LogicalName
+    );
+    const getBindKey = (forTarget: string) =>
+        ((isPolymorphic ? navigationProperties[forTarget] : null) ?? props.attribute.LogicalName) + "@odata.bind";
+    const bindKey = getBindKey(target);
+
+    const pluralName = RetrieveSetName(target);
 
     useEffect(() => {
         if (!props.disabled) {
@@ -76,9 +100,16 @@ export function LookupNode(props: AttributeProps & { theme: Theme }) {
                 val = "/" + pluralName + "(" + value.at(0) + ")";
             else
                 val = null;
-            props.attributeToUpdateManager.setAttributesValue(props.attribute.LogicalName + "@odata.bind", val);
+            props.attributeToUpdateManager.setAttributesValue(bindKey, val);
         }
-    }, [pluralName, value]);
+    }, [pluralName, value, bindKey]);
+
+    const handleTargetChange = (newTarget: string) => {
+        props.attributeToUpdateManager.removeAttributesValue(bindKey);
+        setValue([]);
+        setUpdatingValue([]);
+        setTarget(newTarget);
+    }
 
 
     const setDirty = (newValue: string[]) => {
@@ -106,9 +137,9 @@ export function LookupNode(props: AttributeProps & { theme: Theme }) {
 
     useEffect(() => {
         if (props.remove) {
-            props.attributeToUpdateManager.removeAttributesValue(props.attribute.LogicalName + "@odata.bind");
+            props.attributeToUpdateManager.removeAttributesValue(bindKey);
         }
-    }, [props.attributeToUpdateManager, props.remove]);
+    }, [props.attributeToUpdateManager, props.remove, bindKey]);
 
     useUpdateEffect(() => {
         if (isArraysEquals(value, updatingValue)) return;
@@ -117,13 +148,28 @@ export function LookupNode(props: AttributeProps & { theme: Theme }) {
     }, [updatingValue]);
 
 
-    return <RecordSelector
-        entityname={props.attribute.Parameters.Target}
+    const recordSelector = <RecordSelector
+        entityname={target}
         recordsIds={value}
         setRecordsIds={setUpdatingValue}
         disabled={props.disabled}
         theme={props.theme}
     />
+
+    if (!isPolymorphic) return recordSelector;
+
+    return <Stack direction='row' spacing={0.5} width='100%'>
+        <Select
+            size='small'
+            value={target}
+            disabled={props.disabled}
+            onChange={(e: SelectChangeEvent) => handleTargetChange(e.target.value)}
+            sx={{ maxWidth: '35%' }}
+        >
+            {targets.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+        </Select>
+        {recordSelector}
+    </Stack>
 }
 export function StringNode(props: AttributeProps) {
     const [oldValue, setOldValue] = useState<string | null>(props.value ? props.value : null)

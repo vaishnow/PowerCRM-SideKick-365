@@ -24,6 +24,7 @@ import Typography from "@mui/material/Typography";
 import ThemeProvider from "@mui/styles/ThemeProvider";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { ConfirmProvider, useConfirm } from "material-ui-confirm";
 import { SnackbarProvider, useSnackbar } from "notistack";
 import React, {
     forwardRef,
@@ -69,7 +70,7 @@ import {
     StringNode,
     type AttributeProps
 } from "./nodes";
-import { defaultWriteSettings, writeCreate, writeUpdate, type WriteSettings } from "./writeRecord";
+import { defaultWriteSettings, writeCreate, writeDelete, writeUpdate, type WriteSettings } from "./writeRecord";
 import { useUpdateEffect } from "@custom-react-hooks/all";
 import DetailsSnackbar from "~utils/components/DetailsSnackbar";
 import { PROJECT_PREFIX } from "~utils/global/var";
@@ -97,7 +98,9 @@ const UpdateRecordContainer = forwardRef<ProcessRef, ProcessProps>(function Upda
                     Components={{
                         detailsFile: DetailsSnackbar
                     }}>
-                    <UpdateRecord ref={ref} {...props} />
+                    <ConfirmProvider>
+                        <UpdateRecord ref={ref} {...props} />
+                    </ConfirmProvider>
                 </SnackbarProvider>
             </LocalizationProvider>
         </StyledEngineProvider>
@@ -114,6 +117,7 @@ const UpdateRecord = forwardRef<ProcessRef, ProcessProps>(function UpdateRecord(
 ) {
     const { isDebug } = useSpDevTools();
     const { enqueueSnackbar } = useSnackbar();
+    const openConfirmDialog = useConfirm();
     const { formContext } = useFormContextDocument();
     const { xrmUpdated } = useXrmUpdated();
 
@@ -281,6 +285,52 @@ const UpdateRecord = forwardRef<ProcessRef, ProcessProps>(function UpdateRecord(
         );
     }, [attributesValueKeys.length, attributesValues, enqueueSnackbar, entityName, setName, writeSettings]);
 
+    const launchDelete = useCallback(async () => {
+        debugLog("Launch Delete for", entityName, recordsIds);
+
+        if (recordsIds.length === 0) return;
+
+        const { confirmed } = await openConfirmDialog({
+            title: `Delete ${recordsIds.length} ${entityName}?`,
+            description: "This cannot be undone.",
+            confirmationText: "Delete",
+            confirmationButtonProps: { color: "error", variant: "contained" },
+            cancellationText: "Cancel"
+        });
+        if (!confirmed) return;
+
+        Xrm.Utility.showProgressIndicator(`Deleting ${recordsIds.length} ${entityName}`);
+
+        recordsIds.forEach((recordid) => {
+            writeDelete(entityName, setName, recordid, writeSettings).then(
+                function success(_result) {
+                    Xrm.Utility.closeProgressIndicator();
+                    setRecordsIds((ids) => ids.filter((id) => id !== recordid));
+                    enqueueSnackbar(entityName + " " + recordid + " deleted.", { variant: "success" });
+                },
+                function (error) {
+                    Xrm.Utility.closeProgressIndicator();
+                    enqueueSnackbar("Deleting " + entityName + " " + recordid + " has encountered an error.", {
+                        variant: "detailsFile",
+                        detailsVariant: "error",
+                        persist: true,
+                        allowDownload: true,
+                        detailsNode: (
+                            <Typography gutterBottom variant="caption" style={{ color: "#000", display: "block" }}>
+                                {`(0x${error.errorCode.toString(16)}) ${error.message}`}
+                            </Typography>
+                        ),
+                        downloadButtonLabel: "Download log file",
+                        fileContent: error.raw,
+                        fileName: "ErrorDetails.txt"
+                    });
+
+                    console.error(error.message);
+                }
+            );
+        });
+    }, [enqueueSnackbar, entityName, openConfirmDialog, recordsIds, setName, writeSettings]);
+
     return (
         <Stack spacing={0.5} width="-webkit-fill-available" padding="10px" height="calc(100% - 10px)">
             <NavTopBar
@@ -289,6 +339,7 @@ const UpdateRecord = forwardRef<ProcessRef, ProcessProps>(function UpdateRecord(
                 setCurrentRecord={setCurrentRecord}
                 launchUpdate={launchUpdate}
                 launchCreate={launchCreate}
+                launchDelete={launchDelete}
                 setFilterAttribute={setFilterAttribute}
                 entityname={entityName}
                 recordsIds={recordsIds}
@@ -448,6 +499,9 @@ function AttributesList(props: AttributesListProps) {
                                 attribute={metadata}
                                 entityname={props.entityname}
                                 value={attributesRetrieved[attributeName]}
+                                valueTarget={
+                                    attributesRetrieved[attributeName + "@Microsoft.Dynamics.CRM.lookuplogicalname"]
+                                }
                                 filter={filter}
                                 resetAttributes={props.resetAttributes}
                                 attributeToUpdateManager={props.attributeToUpdateManager}
@@ -475,6 +529,7 @@ type AttributeNodeProps = {
     attribute: AttributeMetadata;
     entityname: string;
     value: any;
+    valueTarget?: string;
     disabled: boolean;
     filter: string;
     resetAttributes: boolean;
@@ -575,6 +630,7 @@ const AttributeNode = React.memo((props: AttributeNodeProps) => {
                 attribute={props.attribute}
                 entityname={props.entityname}
                 value={props.value}
+                valueTarget={props.valueTarget}
                 manageDirty={{ set: manageDirty.setTrue, remove: manageDirty.setFalse }}
                 reset={toReset}
                 remove={toRemove}
@@ -594,7 +650,7 @@ const AttributeNode = React.memo((props: AttributeNodeProps) => {
     );
 });
 
-function AttributeFactory(props: AttributeProps & { entityname: string }) {
+function AttributeFactory(props: AttributeProps & { entityname: string; valueTarget?: string }) {
     const theme = useTheme();
 
     switch (props.attribute.MStype) {
@@ -609,6 +665,8 @@ function AttributeFactory(props: AttributeProps & { entityname: string }) {
                     disabled={props.disabled}
                     attributeToUpdateManager={props.attributeToUpdateManager}
                     theme={theme}
+                    entityname={props.entityname}
+                    valueTarget={props.valueTarget}
                 />
             );
         case MSType.String:
@@ -797,6 +855,7 @@ type NavBarProps = {
     setCurrentRecord: () => void;
     launchUpdate: () => void;
     launchCreate: () => void;
+    launchDelete: () => void;
     setFilterAttribute: (str: string) => void;
     entityname: string;
     recordsIds: string[];
@@ -940,6 +999,15 @@ function NavTopBar(props: NavBarProps) {
                             ),
                             action: props.launchUpdate,
                             onSelect: () => props.setMode("update")
+                        },
+                        {
+                            title: (
+                                <Stack direction="row" spacing={2}>
+                                    <DeleteIcon /> <div>Launch Delete</div>
+                                </Stack>
+                            ),
+                            action: props.launchDelete,
+                            disabled: props.recordsIds.length === 0
                         }
                     ]}
                     actionIndex={props.recordsIds.length === 0 ? 0 : 1}

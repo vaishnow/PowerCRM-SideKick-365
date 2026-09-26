@@ -122,6 +122,29 @@ export function writeCreate(
     }, rejectFromThrown);
 }
 
+export function writeDelete(
+    entityName: string,
+    setName: string | undefined,
+    recordId: string,
+    settings: WriteSettings
+): Promise<void> {
+    if (settings.method === "legacy") {
+        return Xrm.WebApi.online.deleteRecord(entityName, recordId) as any;
+    }
+
+    const url = getSetUrl(setName);
+    if (!url) {
+        return rejectFromThrown(new Error(`Entity set name not resolved yet for ${entityName}.`));
+    }
+
+    return fetch(`${url}(${formatId(recordId)})`, {
+        method: "DELETE",
+        headers: buildHeaders(settings)
+    }).then(async (response) => {
+        if (!response.ok) return rejectFromResponse(response);
+    }, rejectFromThrown);
+}
+
 export function writeUpdate(
     entityName: string,
     setName: string | undefined,
