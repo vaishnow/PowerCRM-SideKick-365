@@ -2,6 +2,8 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
+import TextFieldsIcon from "@mui/icons-material/TextFields";
+import TextFieldsOutlinedIcon from "@mui/icons-material/TextFieldsOutlined";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
@@ -18,16 +20,19 @@ import JsonView from "@uiw/react-json-view";
 import { vscodeTheme } from "@uiw/react-json-view/vscode";
 import React, { forwardRef, useCallback, useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom";
-import { useBoolean, useCopyToClipboard } from "usehooks-ts";
+import { useBoolean, useCopyToClipboard, useLocalStorage } from "usehooks-ts";
 
 import CopyMenu from "../../utils/components/CopyMenu";
 import DontShowInfo from "../../utils/components/DontShowInfo";
 import FilterInput from "../../utils/components/FilterInput";
 import MuiVirtuoso from "../../utils/components/MuiVirtuoso";
 import { ProcessButton, type ProcessProps, type ProcessRef } from "../../utils/global/.processClass";
+import { formatId, getWebApiBaseUrl } from "../../utils/global/common";
+import { PROJECT_PREFIX } from "../../utils/global/var";
 import useCopyWithSnack from "../../utils/hooks/use/useCopyWithSnack";
 import { useCurrentRecord } from "../../utils/hooks/use/useCurrentRecord";
 import { RetrieveAllAttributes } from "../../utils/hooks/XrmApi/RetrieveAllAttributes";
+import { RetrieveSetName } from "../../utils/hooks/XrmApi/RetrieveSetName";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import Checkbox from "@mui/material/Checkbox";
@@ -116,7 +121,20 @@ const AllFieldsButtonProcess = forwardRef<ProcessRef, ProcessProps>(function All
 
     const { entityName, recordId, forceRefresh } = useCurrentRecord();
 
-    const [attributes, isFetching] = RetrieveAllAttributes(entityName ?? "", recordId);
+    const [includeAnnotations, setIncludeAnnotations] = useLocalStorage<boolean>(
+        PROJECT_PREFIX + "allfields-annotations",
+        false
+    );
+    const [attributes, isFetching] = RetrieveAllAttributes(entityName ?? "", recordId, includeAnnotations);
+    const setName = RetrieveSetName(entityName ?? "");
+
+    const openInWebApi = useMemo(
+        () =>
+            setName && recordId
+                ? () => window.open(`${getWebApiBaseUrl()}${setName}(${formatId(recordId)})`)
+                : undefined,
+        [setName, recordId]
+    );
 
     const [notNullOnly, setNotNullOnly] = useState<boolean>(false);
 
@@ -274,6 +292,9 @@ const AllFieldsButtonProcess = forwardRef<ProcessRef, ProcessProps>(function All
                     setFilter={setFilter}
                     notNullOnly={notNullOnly}
                     setNotNullOnly={setNotNullOnly}
+                    includeAnnotations={includeAnnotations}
+                    setIncludeAnnotations={setIncludeAnnotations}
+                    openInWebApi={openInWebApi}
                 />
             ) : (
                 <AttributeList
@@ -290,6 +311,9 @@ const AllFieldsButtonProcess = forwardRef<ProcessRef, ProcessProps>(function All
                     setFilter={setFilter}
                     notNullOnly={notNullOnly}
                     setNotNullOnly={setNotNullOnly}
+                    includeAnnotations={includeAnnotations}
+                    setIncludeAnnotations={setIncludeAnnotations}
+                    openInWebApi={openInWebApi}
                 />
             )}
         </ThemeProvider>
@@ -297,9 +321,12 @@ const AllFieldsButtonProcess = forwardRef<ProcessRef, ProcessProps>(function All
 });
 
 function AttributeListFilter(
-    props: Pick<AttributeListCommonProps, "filter" | "setFilter" | "notNullOnly" | "setNotNullOnly">
+    props: Pick<
+        AttributeListCommonProps,
+        "filter" | "setFilter" | "notNullOnly" | "setNotNullOnly" | "includeAnnotations" | "setIncludeAnnotations"
+    >
 ) {
-    const { filter, setFilter, notNullOnly, setNotNullOnly } = props;
+    const { filter, setFilter, notNullOnly, setNotNullOnly, includeAnnotations, setIncludeAnnotations } = props;
 
     return (
         <Stack direction="row" spacing={0.5} width="100%" alignItems="center">
@@ -320,6 +347,17 @@ function AttributeListFilter(
                     checkedIcon={<FactCheckIcon color="primary" />}
                 />
             </Tooltip>
+
+            <Tooltip title={<Typography>Show formatted values & annotations</Typography>}>
+                <Checkbox
+                    checked={includeAnnotations}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                        setIncludeAnnotations(event.target.checked);
+                    }}
+                    icon={<TextFieldsOutlinedIcon />}
+                    checkedIcon={<TextFieldsIcon color="primary" />}
+                />
+            </Tooltip>
         </Stack>
     );
 }
@@ -332,6 +370,9 @@ interface AttributeListCommonProps {
     setFilter: React.Dispatch<React.SetStateAction<string>>;
     notNullOnly: boolean;
     setNotNullOnly: React.Dispatch<React.SetStateAction<boolean>>;
+    includeAnnotations: boolean;
+    setIncludeAnnotations: React.Dispatch<React.SetStateAction<boolean>>;
+    openInWebApi?: () => void;
 }
 interface AttributeListProps {
     processId: string;
@@ -370,7 +411,10 @@ const AttributeListRaw = React.memo((props: AttributeListRawProps & AttributeLis
         filter,
         setFilter,
         notNullOnly,
-        setNotNullOnly
+        setNotNullOnly,
+        includeAnnotations,
+        setIncludeAnnotations,
+        openInWebApi
     } = props;
 
     return (
@@ -386,6 +430,9 @@ const AttributeListRaw = React.memo((props: AttributeListRawProps & AttributeLis
                 <ButtonGroup variant="contained" fullWidth size="small">
                     <Button onClick={copyRawInClipboard}>{copying ? "Copied!" : "Copy"}</Button>
                     <Button onClick={openRawInTab}>Open in tab</Button>
+                    <Button onClick={openInWebApi} disabled={!openInWebApi}>
+                        Open in WebAPI
+                    </Button>
                     <Button onClick={forceRefresh}>Refresh</Button>
                     <Button onClick={toggleShowRaw}>Hide Raw</Button>
                 </ButtonGroup>
@@ -395,6 +442,8 @@ const AttributeListRaw = React.memo((props: AttributeListRawProps & AttributeLis
                     setFilter={setFilter}
                     notNullOnly={notNullOnly}
                     setNotNullOnly={setNotNullOnly}
+                    includeAnnotations={includeAnnotations}
+                    setIncludeAnnotations={setIncludeAnnotations}
                 />
 
                 <Box height="calc(100% - 80px)" width="100%">
@@ -430,7 +479,10 @@ const AttributeList = React.memo((props: AttributeListProps & AttributeListCommo
         filter,
         setFilter,
         notNullOnly,
-        setNotNullOnly
+        setNotNullOnly,
+        includeAnnotations,
+        setIncludeAnnotations,
+        openInWebApi
     } = props;
 
     return (
@@ -457,6 +509,9 @@ const AttributeList = React.memo((props: AttributeListProps & AttributeListCommo
                 })}>
                     <Button onClick={toggleForceOpen}>Open All</Button>
                     <Button onClick={toggleForceClose}>Close All</Button>
+                    <Button onClick={openInWebApi} disabled={!openInWebApi}>
+                        Open in WebAPI
+                    </Button>
                     <Button onClick={forceRefresh}>Refresh</Button>
                     <Button onClick={toggleShowRaw}>Show Raw</Button>
                 </ButtonGroup>
@@ -466,6 +521,8 @@ const AttributeList = React.memo((props: AttributeListProps & AttributeListCommo
                     setFilter={setFilter}
                     notNullOnly={notNullOnly}
                     setNotNullOnly={setNotNullOnly}
+                    includeAnnotations={includeAnnotations}
+                    setIncludeAnnotations={setIncludeAnnotations}
                 />
 
                 <DontShowInfo storageName={`${processId}-maininfo`}>
@@ -562,7 +619,7 @@ const AttributeListItem = React.memo((props: AttributeListItemProps) => {
 
     const copyContent = useMemo(
         () => [
-            { title: "logicalname", content: attributeName },
+            { title: "logicalname", content: attributeName.replace(/^_(.+)_value$/, "$1") },
             { title: "value", content: value?.value }
         ],
         [attributeName, value]
