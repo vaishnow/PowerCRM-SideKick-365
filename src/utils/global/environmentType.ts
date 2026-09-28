@@ -103,7 +103,7 @@ export type TYPE_EnvironmentTheme = {
 
 export const defaultEnvironmentTheme: TYPE_EnvironmentTheme = {
     enabled: true,
-    tintPanel: true,
+    tintPanel: false,
     pageBorder: false,
     showLabel: true,
     types: {

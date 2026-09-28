@@ -364,19 +364,6 @@ const MainScreenCustomPanel: React.FunctionComponent<MainScreenCustomPanelProps>
                             </Button>
                         </Tooltip>
 
-                        {environmentStyle && environmentTheme.showLabel && (
-                            <Typography
-                                variant="caption"
-                                textAlign="center"
-                                color={environmentStyle.color}
-                                fontWeight="bold"
-                                lineHeight={1}
-                                py={0.5}
-                                sx={{ writingMode: "vertical-rl", alignSelf: "center" }}>
-                                {environmentStyle.label}
-                            </Typography>
-                        )}
-
                         <Divider />
 
                         <DragDropContext onDragEnd={onDragEnd}>
@@ -462,6 +449,24 @@ const MainScreenCustomPanel: React.FunctionComponent<MainScreenCustomPanelProps>
                             </Droppable>
                         </DragDropContext>
                     </Stack>
+                    {environmentStyle && environmentTheme.showLabel && (
+                        <Typography
+                            variant="caption"
+                            textAlign="center"
+                            color={environmentStyle.color}
+                            fontWeight="bold"
+                            lineHeight={1}
+                            py={1}
+                            sx={{
+                                writingMode: "vertical-rl",
+                                alignSelf: "center",
+                                userSelect: "none",
+                                cursor: "default"
+                            }}>
+                            {environmentStyle.label}
+                        </Typography>
+                    )}
+
                     <Typography
                         sx={{
                             writingMode: "vertical-rl",
