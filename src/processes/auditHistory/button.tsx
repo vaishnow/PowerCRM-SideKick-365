@@ -21,6 +21,11 @@ class AuditHistoryButton extends ToolPanelButton {
                     several fields at once - and sorted on any column.
                 </Typography>
                 <Typography>
+                    <b>Add</b> keeps a record in view while another one is picked, even from another table: their
+                    changes are merged by date, each record tinted its own colour, to follow what triggered what.
+                    Field names switch between logical and display names, and the panel can go full screen.
+                </Typography>
+                <Typography>
                     The raw audit columns - <b>change data</b>, attribute mask, operation, transaction id, calling
                     user - are hidden: unhide them from a column header menu, under <i>Manage columns</i>.
                 </Typography>

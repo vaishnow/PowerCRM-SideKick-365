@@ -1,15 +1,21 @@
 import CancelIcon from "@mui/icons-material/Cancel";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import FullscreenIcon from "@mui/icons-material/Fullscreen";
+import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
 import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import IconButton from "@mui/material/IconButton";
 import Link from "@mui/material/Link";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
-import { type SxProps, type Theme } from "@mui/material/styles";
+import { alpha, type SxProps, type Theme } from "@mui/material/styles";
 import { DataGrid, gridClasses, type GridColDef } from "@mui/x-data-grid";
 import { DateTimePicker, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -25,12 +31,13 @@ import { ProcessButton, type ProcessProps, type ProcessRef } from "../../utils/g
 import { getCurrentDynamics365DateTimeFormat, getRecordUrl } from "../../utils/global/common";
 import { PROJECT_PREFIX } from "../../utils/global/var";
 import { useCurrentRecord } from "../../utils/hooks/use/useCurrentRecord";
-import { type AuditRow } from "../../utils/types/AuditHistory";
+import { type AuditRow, type AuditSource } from "../../utils/types/AuditHistory";
 import {
     AUDIT_PAGE_SIZE_DEFAULT,
     AUDIT_PAGE_SIZES,
     RetrieveAuditHistory
 } from "../../utils/hooks/XrmApi/RetrieveAuditHistory";
+import { RetrieveEntitiesAttributesDisplayName } from "../../utils/hooks/XrmApi/RetrieveEntitiesAttributesDisplayName";
 
 class AuditHistoryProcess extends ProcessButton {
     static id = "audithistory";
@@ -104,9 +111,29 @@ function ChangedValueCell(props: { label: string; entityName: string; recordId: 
  */
 const spanByEvent = (value: any, row: AuditRow) => row.auditid;
 
-/** The date column shows the org formatted string: `date` is only there to sort and filter on. */
+/**
+ * Attribute and values differ on every row: spanning them on their value would merge two
+ * unrelated changes that happen to show the same text.
+ */
+const spanNever = (value: any, row: AuditRow) => row.id;
+
+/** Row tints telling the sources apart, in the order they were added. */
+const SOURCE_TINTS = ["#1976d2", "#2e7d32", "#ed6c02", "#9c27b0", "#0288d1", "#d32f2f"];
+
+/** One row class per tint, set by getRowClassName. */
+const SOURCE_ROWS_SX: Record<string, object> = Object.fromEntries(
+    SOURCE_TINTS.map((tint, index) => [
+        `& .audit-source-${index}`,
+        { bgcolor: alpha(tint, 0.08), "&:hover": { bgcolor: alpha(tint, 0.16) } }
+    ])
+);
+
+const sourceKey = (source: AuditSource) => `${source.entityName}|${source.recordId}`;
+const rowSourceKey = (row: AuditRow) => `${row.sourceEntityName}|${row.sourceRecordId}`;
+
+/** Date width and format, and the attribute label, depend on settings: see `columns`. */
 const COLUMNS: GridColDef[] = [
-    { field: "dateFormatted", headerName: "Date", width: 140, rowSpanValueGetter: spanByEvent },
+    { field: "date", headerName: "Date", type: "dateTime", rowSpanValueGetter: spanByEvent },
     {
         field: "user",
         headerName: "User",
@@ -117,12 +144,13 @@ const COLUMNS: GridColDef[] = [
         )
     },
     { field: "action", headerName: "Action", width: 100, rowSpanValueGetter: spanByEvent },
-    { field: "attribute", headerName: "Attribute", width: 160 },
+    { field: "attribute", headerName: "Attribute", width: 160, rowSpanValueGetter: spanNever },
     {
         field: "oldValue",
         headerName: "Old Value",
         flex: 1,
         minWidth: 120,
+        rowSpanValueGetter: spanNever,
         renderCell: (params) => (
             <ChangedValueCell
                 label={params.value}
@@ -136,6 +164,7 @@ const COLUMNS: GridColDef[] = [
         headerName: "New Value",
         flex: 1,
         minWidth: 120,
+        rowSpanValueGetter: spanNever,
         renderCell: (params) => (
             <ChangedValueCell
                 label={params.value}
@@ -194,19 +223,26 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
     }, [currentRecordId]);
 
     const recordId = recordIds.at(0);
+
+    // Records added to view together. The one in the search bar is viewed with them until added
+    // itself, so the single record flow stays as it was.
+    const [addedSources, setAddedSources] = useState<AuditSource[]>([]);
+    const isSelectedAdded = addedSources.some((added) => sourceKey(added) === `${entityName}|${recordId}`);
+    const sources = useMemo(
+        () => (entityName && recordId && !isSelectedAdded ? [...addedSources, { entityName, recordId }] : addedSources),
+        [addedSources, entityName, recordId, isSelectedAdded]
+    );
+    const sourcesKey = sources.map(sourceKey).join(",");
+    const singleSource = sources.length <= 1;
+
     const [pageSize, setPageSize] = useLocalStorage<number>(PAGE_SIZE_STORAGE_KEY, AUDIT_PAGE_SIZE_DEFAULT);
     const [page, setPage] = useState<number>(0);
-    const [rows, isFetching, error, refresh, hasMore] = RetrieveAuditHistory(
-        entityName,
-        recordId,
-        page,
-        pageSize
-    );
+    const [rows, isFetching, error, refresh, hasMore] = RetrieveAuditHistory(sources, page, pageSize);
 
     useEffect(() => {
         setPage(0);
         setFields([]);
-    }, [entityName, recordId, pageSize]);
+    }, [sourcesKey, pageSize]);
 
     // A record of the previous entity cannot be audited under the new one.
     const onEntityChange = useCallback((name: string) => {
@@ -224,13 +260,61 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
     const [filterDateMin, setFilterDateMin] = useState<Dayjs | null>(null);
     const [filterDateMax, setFilterDateMax] = useState<Dayjs | null>(null);
 
+    const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
+    const [showDisplayNames, setShowDisplayNames] = useState<boolean>(false);
+
     const dateTimeFormat = useMemo(() => getCurrentDynamics365DateTimeFormat(), []);
+
+    const displayNames = RetrieveEntitiesAttributesDisplayName(
+        showDisplayNames
+            ? [
+                  ...new Set(
+                      rows.filter((row) => row.attribute).map((row) => `${row.sourceEntityName}.${row.attribute}`)
+                  )
+              ]
+            : []
+    );
+    const attributeLabel = useCallback(
+        (row: AuditRow) =>
+            (showDisplayNames && displayNames[`${row.sourceEntityName}.${row.attribute}`]) || row.attribute,
+        [showDisplayNames, displayNames]
+    );
 
     // Only fields that actually changed in the loaded rows are offered: an option matching nothing
     // is not worth showing. Events with no attribute detail contribute an empty name.
     const fieldOptions = useMemo(
         () => [...new Set(rows.map((row) => row.attribute))].filter(Boolean).sort(),
         [rows]
+    );
+    // shortcut: a logical name shared by several viewed entities shows the first entity's label.
+    const fieldOptionLabels = useMemo(() => {
+        const labels: Record<string, string> = {};
+        rows.forEach((row) => (labels[row.attribute] ??= attributeLabel(row)));
+        return labels;
+    }, [rows, attributeLabel]);
+
+    const columns = useMemo<GridColDef[]>(
+        () =>
+            COLUMNS.map((column) => {
+                if (column.field === "date") {
+                    return {
+                        ...column,
+                        width: dateTimeFormat.is12hours ? 170 : 150,
+                        valueFormatter: (value: Date) =>
+                            value && dayjs(value).format(dateTimeFormat.ShortDateTimeSecondsPattern)
+                    };
+                }
+                if (column.field === "attribute") {
+                    return { ...column, valueGetter: (value: string, row: AuditRow) => attributeLabel(row) };
+                }
+                return column;
+            }),
+        [dateTimeFormat, attributeLabel]
+    );
+
+    const sourceIndexes = useMemo(
+        () => Object.fromEntries(sources.map((source, index) => [sourceKey(source), index])),
+        [sources]
     );
 
     const rowsFiltered = useMemo(
@@ -242,6 +326,7 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                     row.user.toLowerCase().includes(search) ||
                     row.action.toLowerCase().includes(search) ||
                     row.attribute.toLowerCase().includes(search) ||
+                    attributeLabel(row).toLowerCase().includes(search) ||
                     row.oldValue.toLowerCase().includes(search) ||
                     row.newValue.toLowerCase().includes(search) ||
                     row.changeData.toLowerCase().includes(search);
@@ -250,22 +335,74 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                 const dateFilterMax = !filterDateMax || dayjs(row.date) <= filterDateMax;
                 return textFilterResult && fieldFilterResult && dateFilterMin && dateFilterMax;
             }),
-        [rows, filter, fields, filterDateMin, filterDateMax]
+        [rows, filter, fields, filterDateMin, filterDateMax, attributeLabel]
     );
 
     return (
         <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <Stack direction="column" width="100%" height="100%">
+            <Stack
+                direction="column"
+                width="100%"
+                height="100%"
+                // Fixed rather than a dialog: the grid is not remounted, so its state survives.
+                sx={
+                    isFullScreen
+                        ? { position: "fixed", inset: 0, zIndex: 1300, bgcolor: "background.paper" }
+                        : undefined
+                }>
                 <Stack direction="column" p={1} spacing={0.5}>
-                    <RecordSearchBar
-                        entityName={entityName}
-                        setEntityName={onEntityChange}
-                        recordIds={recordIds}
-                        setRecordIds={setRecordIds}
-                        reset={reset}
-                    />
                     <Stack direction="row" spacing={0.5} alignItems="center">
-                        <Box width="32%">
+                        <RecordSearchBar
+                            entityName={entityName}
+                            setEntityName={onEntityChange}
+                            recordIds={recordIds}
+                            setRecordIds={setRecordIds}
+                            reset={reset}
+                        />
+                        <Button
+                            variant="outlined"
+                            title="View this record together with the ones already added"
+                            disabled={!recordId || isSelectedAdded}
+                            onClick={() => setAddedSources((previous) => [...previous, { entityName, recordId }])}>
+                            Add
+                        </Button>
+                        <IconButton
+                            size="small"
+                            title={isFullScreen ? "Exit full screen" : "Full screen"}
+                            onClick={() => setIsFullScreen((previous) => !previous)}>
+                            {isFullScreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
+                        </IconButton>
+                    </Stack>
+                    {addedSources.length > 0 && (
+                        <Stack direction="row" gap={0.5} flexWrap="wrap">
+                            {sources.map((source, index) => {
+                                const isAdded = addedSources.includes(source);
+                                return (
+                                    <Chip
+                                        key={sourceKey(source)}
+                                        size="small"
+                                        label={`${source.entityName}: ${source.recordId.slice(0, 8)}`}
+                                        title={`${source.entityName} ${source.recordId}${
+                                            isAdded ? "" : " (selected, not added yet)"
+                                        }`}
+                                        variant={isAdded ? "filled" : "outlined"}
+                                        sx={{ bgcolor: alpha(SOURCE_TINTS[index % SOURCE_TINTS.length], 0.16) }}
+                                        deleteIcon={<CancelIcon style={{ cursor: "pointer" }} />}
+                                        onDelete={
+                                            isAdded
+                                                ? () =>
+                                                      setAddedSources((previous) =>
+                                                          previous.filter((added) => added !== source)
+                                                      )
+                                                : undefined
+                                        }
+                                    />
+                                );
+                            })}
+                        </Stack>
+                    )}
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Box width="28%">
                             <FilterInput fullWidth placeholder="Search in changes" returnFilterInput={setFilter} />
                         </Box>
                         <Autocomplete
@@ -274,9 +411,10 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                             limitTags={1}
                             disableCloseOnSelect
                             options={fieldOptions}
+                            getOptionLabel={(option) => fieldOptionLabels[option] ?? option}
                             value={fields}
                             onChange={(event, value) => setFields(value)}
-                            sx={{ width: "44%" }}
+                            sx={{ width: "36%" }}
                             // Chip already styles its delete icon with cursor: pointer, but a host
                             // page stylesheet wins over it. Inline beats both, as the cursor
                             // handling in RecordSelector does. The icon is the one Chip defaults to.
@@ -285,11 +423,23 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                                 <TextField {...params} placeholder={fields.length ? "" : "All fields"} />
                             )}
                         />
+                        <ToggleButtonGroup
+                            exclusive
+                            size="small"
+                            value={showDisplayNames}
+                            onChange={(event, value) => value !== null && setShowDisplayNames(value)}>
+                            <ToggleButton value={false} title="Logical names">
+                                Logical
+                            </ToggleButton>
+                            <ToggleButton value={true} title="Display names">
+                                Display
+                            </ToggleButton>
+                        </ToggleButtonGroup>
                         <ButtonLinearProgress
                             variant="contained"
                             loading={isFetching}
                             onClick={refresh}
-                            sx={{ whiteSpace: "nowrap", width: "24%" }}>
+                            sx={{ whiteSpace: "nowrap", width: "16%" }}>
                             Refresh
                         </ButtonLinearProgress>
                     </Stack>
@@ -297,7 +447,8 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                         <DateTimePicker
                             label="Minimum DateTime"
                             ampm={dateTimeFormat.is12hours}
-                            format={dateTimeFormat.ShortDateTimePattern}
+                            format={dateTimeFormat.ShortDateTimeSecondsPattern}
+                            views={["year", "month", "day", "hours", "minutes", "seconds"]}
                             onChange={setFilterDateMin}
                             value={filterDateMin}
                             sx={DateTimeSx}
@@ -308,7 +459,8 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                         <DateTimePicker
                             label="Maximum DateTime"
                             ampm={dateTimeFormat.is12hours}
-                            format={dateTimeFormat.ShortDateTimePattern}
+                            format={dateTimeFormat.ShortDateTimeSecondsPattern}
+                            views={["year", "month", "day", "hours", "minutes", "seconds"]}
                             onChange={setFilterDateMax}
                             value={filterDateMax}
                             sx={DateTimeSx}
@@ -333,8 +485,8 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                         </TextField>
 
                         <Typography variant="caption" flexGrow={1} sx={{ opacity: 0.75 }}>
-                            {recordId
-                                ? `Page ${page + 1} - ${rowsFiltered.length}${
+                            {sources.length
+                                ? `${singleSource ? `Page ${page + 1}` : `${sources.length} records, newest ${pageSize} each`} - ${rowsFiltered.length}${
                                       rowsFiltered.length === rows.length ? "" : ` of ${rows.length}`
                                   } change rows`
                                 : "Select an entity and a record."}
@@ -343,14 +495,14 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                         <IconButton
                             size="small"
                             title="Previous page"
-                            disabled={page === 0 || isFetching}
+                            disabled={page === 0 || isFetching || !singleSource}
                             onClick={() => setPage((previous) => previous - 1)}>
                             <ChevronLeftIcon />
                         </IconButton>
                         <IconButton
                             size="small"
                             title="Next page"
-                            disabled={!hasMore || isFetching}
+                            disabled={!hasMore || isFetching || !singleSource}
                             onClick={() => setPage((previous) => previous + 1)}>
                             <ChevronRightIcon />
                         </IconButton>
@@ -365,7 +517,7 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                 <Box flexGrow={1} minHeight={0}>
                     <DataGrid
                         rows={rowsFiltered}
-                        columns={COLUMNS}
+                        columns={columns}
                         getRowId={(row) => row.id}
                         loading={isFetching}
                         initialState={{ columns: { columnVisibilityModel: HIDDEN_COLUMNS } }}
@@ -374,8 +526,12 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                         disableRowSelectionOnClick
                         hideFooter
                         unstable_rowSpanning
+                        getRowClassName={(params) =>
+                            singleSource ? "" : `audit-source-${sourceIndexes[rowSourceKey(params.row)] % SOURCE_TINTS.length}`
+                        }
                         sx={{
-                            [`& .${gridClasses.cell}`]: { display: "flex", alignItems: "flex-start", pt: "6px" }
+                            [`& .${gridClasses.cell}`]: { display: "flex", alignItems: "flex-start", pt: "6px" },
+                            ...SOURCE_ROWS_SX
                         }}
                         slots={{
                             noRowsOverlay: CustomNoRowsOverlay,
