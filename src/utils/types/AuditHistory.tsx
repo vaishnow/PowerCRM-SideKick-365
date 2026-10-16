@@ -2,9 +2,7 @@
 export type AuditRow = {
     /** `<auditid>` for an event with no attribute detail, `<auditid>:<attribute>` otherwise. */
     id: string,
-    /** Kept for the date range filter: the grid displays dateFormatted. */
     date: Date,
-    dateFormatted: string,
     user: string,
     /** Guid behind `user`, for the link to the systemuser record. */
     userId: string,
@@ -28,4 +26,12 @@ export type AuditRow = {
     callingUser: string,
     callingUserId: string,
     userAdditionalInfo: string,
+    /** The audited record this row was fetched for: several can be viewed together. */
+    sourceEntityName: string,
+    sourceRecordId: string,
+}
+
+export type AuditSource = {
+    entityName: string,
+    recordId: string,
 }

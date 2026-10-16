@@ -223,6 +223,9 @@ export function getCurrentDynamics365DateTimeFormat() {
     return {
         ShortDatePattern: shortDatePattern,
         ShortDateTimePattern: shortDatePattern + " " + dateFormattingInfo.ShortTimePattern.replace(/\btt\b/, "A"),
+        /** The short date with the org's long time pattern: the only built-in one with seconds. */
+        ShortDateTimeSecondsPattern:
+            shortDatePattern + " " + dateFormattingInfo.LongTimePattern.replace(/\btt\b/, "A"),
         is12hours: dateFormattingInfo.ShortTimePattern.includes("tt"),
         FullDateTimePattern: dateFormattingInfo.FullDateTimePattern.replace(/\byyyy\b/, "YYYY")
             .replace(/\bdd\b/, "DD")

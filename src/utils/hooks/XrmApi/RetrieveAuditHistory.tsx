@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { debugLog } from "../../global/common";
-import { type AuditRow } from "../../types/AuditHistory";
+import { type AuditRow, type AuditSource } from "../../types/AuditHistory";
 
 export const AUDIT_PAGE_SIZES = [25, 50, 100, 250];
 export const AUDIT_PAGE_SIZE_DEFAULT = 50;
@@ -71,9 +71,13 @@ function parseChangedAttributes(changedata: string | undefined): ChangedAttribut
     }
 }
 
+/**
+ * Each source is its own request, as audit only takes one objecttypecode condition, and the rows
+ * are merged newest first so a change on one record sits next to the changes it caused on another.
+ * The page applies to every source alike.
+ */
 export function RetrieveAuditHistory(
-    entityname: string | undefined,
-    recordid: string | undefined,
+    sources: AuditSource[],
     page: number,
     pageSize: number
 ): [AuditRow[], boolean, string | null, () => void, boolean] {
@@ -87,8 +91,8 @@ export function RetrieveAuditHistory(
         setLaunchFlag((prev) => !prev);
     }, []);
 
-    const _entityname = entityname;
-    const _recordid = recordid;
+    // The callers rebuild the array on every render: the effect follows its content instead.
+    const _sourcesKey = sources.map((source) => `${source.entityName}|${source.recordId}`).join(",");
     const _page = page;
     const _pageSize = pageSize;
 
@@ -97,95 +101,129 @@ export function RetrieveAuditHistory(
         setData([]);
         setError(null);
         setHasMore(false);
-        if (!_entityname || !_recordid) {
+        const _sources = _sourcesKey
+            ? _sourcesKey.split(",").map((key) => {
+                  const [entityName, recordId] = key.split("|");
+                  return { entityName, recordId };
+              })
+            : [];
+        if (!_sources.length) {
             setIsFetching(false);
             return;
         }
 
-        async function fetchData() {
-            try {
-                // A retrieve on audit is rejected without exactly one objecttypecode condition
-                // at the top level of the filter.
-                const result = await Xrm.WebApi.online.retrieveMultipleRecords(
-                    "audit",
-                    `?$select=${SELECT}&$filter=objecttypecode eq '${_entityname}' and _objectid_value eq ${_recordid}&$orderby=createdon desc` +
-                        skiptokenString(_page + 1),
-                    _pageSize
-                );
+        async function fetchSource(_entityname: string, _recordid: string) {
+            // A retrieve on audit is rejected without exactly one objecttypecode condition
+            // at the top level of the filter.
+            const result = await Xrm.WebApi.online.retrieveMultipleRecords(
+                "audit",
+                `?$select=${SELECT}&$filter=objecttypecode eq '${_entityname}' and _objectid_value eq ${_recordid}&$orderby=createdon desc` +
+                    skiptokenString(_page + 1),
+                _pageSize
+            );
 
-                setHasMore(!!result.nextLink);
+            return {
+                hasMore: !!result.nextLink,
+                rows: result.entities.flatMap((audit: any): AuditRow[] => {
+                    // Event level: repeated on every attribute row this audit record fans out to.
+                    const event = {
+                        date: new Date(audit.createdon),
+                        user: displayValue(audit, "_userid_value"),
+                        userId: audit._userid_value ?? "",
+                        action: displayValue(audit, "action"),
+                        auditid: audit.auditid,
+                        operation: displayValue(audit, "operation"),
+                        objectTypeCode: displayValue(audit, "objecttypecode"),
+                        attributeMask: displayValue(audit, "attributemask"),
+                        changeData: displayValue(audit, "changedata"),
+                        transactionId: displayValue(audit, "transactionid"),
+                        callingUser: displayValue(audit, "_callinguserid_value"),
+                        callingUserId: audit._callinguserid_value ?? "",
+                        userAdditionalInfo: displayValue(audit, "useradditionalinfo"),
+                        sourceEntityName: _entityname,
+                        sourceRecordId: _recordid
+                    };
 
-                setData(
-                    result.entities.flatMap((audit: any) => {
-                        // Event level: repeated on every attribute row this audit record fans out to.
-                        const event = {
-                            date: new Date(audit.createdon),
-                            dateFormatted: audit[`createdon${FORMATTED_SUFFIX}`] ?? audit.createdon,
-                            user: displayValue(audit, "_userid_value"),
-                            userId: audit._userid_value ?? "",
-                            action: displayValue(audit, "action"),
-                            auditid: audit.auditid,
-                            operation: displayValue(audit, "operation"),
-                            objectTypeCode: displayValue(audit, "objecttypecode"),
-                            attributeMask: displayValue(audit, "attributemask"),
-                            changeData: displayValue(audit, "changedata"),
-                            transactionId: displayValue(audit, "transactionid"),
-                            callingUser: displayValue(audit, "_callinguserid_value"),
-                            callingUserId: audit._callinguserid_value ?? "",
-                            userAdditionalInfo: displayValue(audit, "useradditionalinfo")
-                        };
+                    const changedAttributes = parseChangedAttributes(audit.changedata);
 
-                        const changedAttributes = parseChangedAttributes(audit.changedata);
-
-                        // Shares, associations and user access change no attribute: keep the event
-                        // visible rather than dropping it from the history.
-                        if (!changedAttributes.length) {
-                            return [
-                                {
-                                    ...event,
-                                    id: audit.auditid,
-                                    attribute: "",
-                                    oldValue: "",
-                                    newValue: "",
-                                    oldEntity: "",
-                                    oldId: "",
-                                    newEntity: "",
-                                    newId: ""
-                                }
-                            ];
-                        }
-
-                        return changedAttributes.map((changed) => {
-                            const oldReference = parseReference(changed.oldValue);
-                            const newReference = parseReference(changed.newValue);
-
-                            return {
+                    // Shares, associations and user access change no attribute: keep the event
+                    // visible rather than dropping it from the history.
+                    if (!changedAttributes.length) {
+                        return [
+                            {
                                 ...event,
-                                id: `${audit.auditid}:${changed.logicalName}`,
-                                attribute: changed.logicalName,
-                                // oldName and newName carry the label of a choice or lookup; a
-                                // lookup without one falls back to its guid rather than the
-                                // `entityname,guid` pair, which is not worth reading.
-                                oldValue: changed.oldName ?? oldReference.label,
-                                newValue: changed.newName ?? newReference.label,
-                                oldEntity: oldReference.entityName,
-                                oldId: oldReference.recordId,
-                                newEntity: newReference.entityName,
-                                newId: newReference.recordId
-                            };
-                        });
-                    })
-                );
-            } catch (exception: any) {
-                // Needs the prvReadAuditSummary privilege: without it this is a 403.
-                setError(exception?.message ?? "The audit history could not be retrieved.");
-            }
+                                id: audit.auditid,
+                                attribute: "",
+                                oldValue: "",
+                                newValue: "",
+                                oldEntity: "",
+                                oldId: "",
+                                newEntity: "",
+                                newId: ""
+                            }
+                        ];
+                    }
+
+                    return changedAttributes.map((changed) => {
+                        const oldReference = parseReference(changed.oldValue);
+                        const newReference = parseReference(changed.newValue);
+
+                        return {
+                            ...event,
+                            id: `${audit.auditid}:${changed.logicalName}`,
+                            attribute: changed.logicalName,
+                            // oldName and newName carry the label of a choice or lookup; a
+                            // lookup without one falls back to its guid rather than the
+                            // `entityname,guid` pair, which is not worth reading.
+                            oldValue: changed.oldName ?? oldReference.label,
+                            newValue: changed.newName ?? newReference.label,
+                            oldEntity: oldReference.entityName,
+                            oldId: oldReference.recordId,
+                            newEntity: newReference.entityName,
+                            newId: newReference.recordId
+                        };
+                    });
+                })
+            };
+        }
+
+        async function fetchData() {
+            const results = await Promise.allSettled(
+                _sources.map((source) => fetchSource(source.entityName, source.recordId))
+            );
+
+            const errors: string[] = [];
+            const rows: AuditRow[] = [];
+            let more = false;
+            results.forEach((result, index) => {
+                if (result.status === "fulfilled") {
+                    rows.push(...result.value.rows);
+                    more ||= result.value.hasMore;
+                } else {
+                    // Needs the prvReadAuditSummary privilege: without it this is a 403.
+                    errors.push(
+                        `${_sources[index].entityName}: ${
+                            result.reason?.message ?? "The audit history could not be retrieved."
+                        }`
+                    );
+                }
+            });
+
+            // Attribute rows of one audit record share its date: the audit id tiebreak keeps them
+            // together, and the sort is stable so their order inside the record is kept.
+            rows.sort(
+                (a, b) => b.date.getTime() - a.date.getTime() || a.auditid.localeCompare(b.auditid)
+            );
+
+            setData(rows);
+            setHasMore(more);
+            setError(errors.length ? errors.join(" - ") : null);
             setIsFetching(false);
         }
 
         setIsFetching(true);
         fetchData();
-    }, [_entityname, _recordid, _page, _pageSize, launchFlag]);
+    }, [_sourcesKey, _page, _pageSize, launchFlag]);
 
     return [data, isFetching, error, refresh, hasMore];
 }
