@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ExecuteFetchXML } from "../../hooks/XrmApi/ExecuteFetchXML";
 import { RetrieveViews, type ViewRetrieved } from "../../hooks/XrmApi/RetrieveViews";
+import { useCurrentRecord } from "../../hooks/use/useCurrentRecord";
 import useCopyWithSnack from "../../hooks/use/useCopyWithSnack";
 import EntitySelector from "../EntitySelector";
 import FetchXmlTree from "./FetchXmlTree";
@@ -52,6 +53,13 @@ function FetchXmlBuilderPane() {
     const entityName = useMemo(() => (doc ? getFetchEntityName(doc) : ""), [doc]);
 
     const views = RetrieveViews(entityName);
+
+    const { entityName: currentEntityName } = useCurrentRecord();
+
+    /** Opens on the record or list in view, but never overwrites a query already being written. */
+    useEffect(() => {
+        if (currentEntityName) setXml((current) => current || newFetchSkeleton(currentEntityName));
+    }, [currentEntityName]);
 
     useEffect(() => {
         if (!error) return;
