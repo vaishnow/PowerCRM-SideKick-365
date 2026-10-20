@@ -9,10 +9,10 @@ import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import Editor, { loader } from "@monaco-editor/react";
 import { useSnackbar } from "notistack";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { CircularProgressCenteredUnbound } from "../CircularProgressCenteredUnbound";
 import { ExecuteFetchXML } from "../../hooks/XrmApi/ExecuteFetchXML";
 import { RetrieveViews, type ViewRetrieved } from "../../hooks/XrmApi/RetrieveViews";
 import useCopyWithSnack from "../../hooks/use/useCopyWithSnack";
@@ -36,15 +36,10 @@ import {
 const PAGE_SIZE = 50;
 
 /**
- * Monaco is pulled in on demand. It has to be registered on the loader explicitly, otherwise the
- * editor is fetched from a CDN that the host page blocks, and it never finishes loading.
+ * The loader defaults to a monaco version that only ships ESM, so its AMD require never resolves
+ * and the editor hangs on "Loading". Pinned to the AMD build of the version in our dependencies.
  */
-const MonacoXmlEditor = lazy(async () => {
-    const monaco = await import("monaco-editor");
-    const monacoReact = await import("@monaco-editor/react");
-    monacoReact.loader.config({ monaco });
-    return { default: monacoReact.default };
-});
+loader.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.37.1/min/vs" } });
 
 function FetchXmlBuilderPane() {
     const { enqueueSnackbar } = useSnackbar();
@@ -182,14 +177,12 @@ function FetchXmlBuilderPane() {
                 </Box>
 
                 <Box width="60%" minWidth={0}>
-                    <Suspense fallback={<CircularProgressCenteredUnbound />}>
-                        <MonacoXmlEditor
-                            language="xml"
-                            value={xml}
-                            onChange={(newXml) => setXml(newXml ?? "")}
-                            options={{ minimap: { enabled: false }, wordWrap: "on" }}
-                        />
-                    </Suspense>
+                    <Editor
+                        language="xml"
+                        value={xml}
+                        onChange={(newXml) => setXml(newXml ?? "")}
+                        options={{ minimap: { enabled: false }, wordWrap: "on" }}
+                    />
                 </Box>
             </Stack>
 
