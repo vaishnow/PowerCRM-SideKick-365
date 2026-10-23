@@ -114,7 +114,7 @@ export function getMSFormatDateKeyByValue(value: string): MSDateFormat {
     }
 }
 
-export const enum StringAttributeFormat {
+export enum StringAttributeFormat {
     Email = "Email",
     Phone = "Phone",
     Text = "Text",

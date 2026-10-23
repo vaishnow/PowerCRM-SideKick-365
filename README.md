@@ -210,7 +210,8 @@ Tired of sifting through cluttered and unoptimized log lists?
 The Plugin Trace Logs Explorer provides a streamlined way to view and analyze logs for plugins and custom workflows:
 * **Enhanced Information**: `Access detailed log information with a clear and easy-to-read layout.`
 * **Efficient Filtering**: `Quickly find the logs by filtering by involved entity, message name, and date range.`
-* **Log Correlation**: `After selecting a log, explore the correlation — a view of all related processes, both before and after the selected log.`
+* **Correlation Id Filter**: `Paste a correlation id to retrieve every log of that pipeline from the server, including logs outside the current list.`
+* **Log Correlation**: `After selecting a log, explore the correlation - a view of all related processes, both before and after the selected log.`
 
 <img height="430px" width="10px">
 

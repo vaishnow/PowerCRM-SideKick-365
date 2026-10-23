@@ -198,6 +198,8 @@ export interface ITraceLogsAPI {
     pluginTraceLogs: PluginTraceLog[],
     isFetchingPluginTraceLogs: boolean,
     refreshPluginTraceLogs: () => void,
+    correlationId: string,
+    setCorrelationId: (correlationId: string) => void,
 
     sdkMessageProcessingSteps: { [key: string]: SdkMessageProcessingStep },
     sdkMessageProcessingStepImages: { [key: string]: SdkMessageProcessingStepImage[] },

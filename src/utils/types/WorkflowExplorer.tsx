@@ -48,7 +48,7 @@ export interface PluginStepRow
 }
 
 /** Message values found in a cloud flow's Dataverse trigger. */
-export const enum CloudFlowMessage {
+export enum CloudFlowMessage {
     Create = 1,
     Update = 2,
     Delete = 3

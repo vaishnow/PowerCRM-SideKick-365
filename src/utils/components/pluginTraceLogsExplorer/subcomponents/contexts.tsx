@@ -1,10 +1,12 @@
-import { createContext, useCallback, useEffect, useState } from "react";
+import { createContext, useCallback, useEffect, useMemo, useState } from "react";
 import type { IPluginTraceLogControllerContext, ITraceLogsAPI, PluginTraceLog, SdkMessageProcessingStep, SdkMessageProcessingStepImage } from "../type";
-import { debugLog, noOperation } from "../../../global/common";
+import { debugLog, formatId, noOperation } from "../../../global/common";
 import { RetrieveRecordsByFilter } from "../../../hooks/XrmApi/RetrieveRecordsByFilter";
 import { useDictionnary } from "../../../hooks/use/useDictionnary";
 import { useStateArray } from "../../../hooks/use/useStateArray";
 import { useStateQueue } from "../../../hooks/use/useStateQueue";
+
+export const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const defaultPluginTraceLogController: IPluginTraceLogControllerContext = {
     detailsDialogOpened: false,
@@ -79,6 +81,8 @@ export const defaultTraceLogsAPI: ITraceLogsAPI = {
     pluginTraceLogs: [],
     isFetchingPluginTraceLogs: false,
     refreshPluginTraceLogs: noOperation,
+    correlationId: "",
+    setCorrelationId: noOperation,
     sdkMessageProcessingStepImages: {},
     sdkMessageProcessingSteps: {},
     isFetchingSteps: false,
@@ -95,7 +99,14 @@ export const TraceLogsAPI = (props: TraceLogsAPIProps & React.PropsWithChildren)
     const { maxFetchingRecord = 10, children } = props;
 
 
-    const [pluginTraceLogs, isFetching, refreshPluginTraceLogs]: [PluginTraceLog[], boolean, () => void] = RetrieveRecordsByFilter('plugintracelog', [], '', 'performanceexecutionstarttime desc');
+    const [correlationId, setCorrelationId] = useState<string>('');
+
+    const logsFilter = useMemo(() => {
+        const id = formatId(correlationId.trim());
+        return GUID_PATTERN.test(id) ? `correlationid eq ${id}` : '';
+    }, [correlationId]);
+
+    const [pluginTraceLogs, isFetching, refreshPluginTraceLogs]: [PluginTraceLog[], boolean, () => void] = RetrieveRecordsByFilter('plugintracelog', [], logsFilter, 'performanceexecutionstarttime desc');
     const { dict: sdkMessageProcessingSteps, setValue: addMessageProcessingSteps } = useDictionnary<SdkMessageProcessingStep>({});
     const { dict: sdkMessageProcessingStepImages, setValue: addMessageProcessingStepImages } = useDictionnary<SdkMessageProcessingStepImage[]>({});
 
@@ -151,6 +162,8 @@ export const TraceLogsAPI = (props: TraceLogsAPIProps & React.PropsWithChildren)
             pluginTraceLogs: pluginTraceLogs,
             isFetchingPluginTraceLogs: isFetching,
             refreshPluginTraceLogs: refreshPluginTraceLogs,
+            correlationId: correlationId,
+            setCorrelationId: setCorrelationId,
 
             sdkMessageProcessingSteps: sdkMessageProcessingSteps,
             sdkMessageProcessingStepImages: sdkMessageProcessingStepImages,

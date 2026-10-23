@@ -14,12 +14,12 @@ import { DateTimePicker } from "@mui/x-date-pickers";
 import dayjs, { Dayjs } from "dayjs";
 import React, { useContext, useEffect, useMemo, useState } from "react";
 
-import { getCurrentDynamics365DateTimeFormat } from "../../global/common";
+import { formatId, getCurrentDynamics365DateTimeFormat } from "../../global/common";
 import { RetrieveFirstRecordInterval } from "../../hooks/XrmApi/RetrieveFirstRecordInterval";
 import ButtonLinearProgress from "../ButtonLinearProgress";
 import EntitySelector from "../EntitySelector";
 import FilterInput from "../FilterInput";
-import { TraceLogsAPIContext } from "./subcomponents/contexts";
+import { GUID_PATTERN, TraceLogsAPIContext } from "./subcomponents/contexts";
 import PluginTraceLogsList from "./subcomponents/PluginTraceLogsList";
 import TraceLogDialog from "./subcomponents/TraceLogDialog";
 import { type PluginTraceLog } from "./type";
@@ -65,8 +65,15 @@ const PluginTraceLogsPane = React.memo((props: PluginTraceLogsPaneProps) => {
     const {
         pluginTraceLogs,
         isFetchingPluginTraceLogs,
-        refreshPluginTraceLogs
+        refreshPluginTraceLogs,
+        correlationId,
+        setCorrelationId
     } = useContext(TraceLogsAPIContext);
+
+    const correlationIdInvalid = useMemo(() => {
+        const id = formatId(correlationId.trim());
+        return !!id && !GUID_PATTERN.test(id);
+    }, [correlationId]);
 
     const [filterEntity, setFilterEntity] = useState<string>("");
     const [filterMessageName, setFilterMessageName] = useState<string>("");
@@ -138,6 +145,9 @@ const PluginTraceLogsPane = React.memo((props: PluginTraceLogsPaneProps) => {
     }, [isFetchingPluginTraceLogs, isFetchingFirst]);
 
     useEffect(() => {
+        // The sentinel polls the newest log org-wide, which a filtered list never matches.
+        if (correlationId) return;
+
         const firstPluginTraceLogsInList = pluginTraceLogs.at(0);
         if (
             firstPluginTraceLogs &&
@@ -147,7 +157,7 @@ const PluginTraceLogsPane = React.memo((props: PluginTraceLogsPaneProps) => {
         ) {
             refreshPluginTraceLogs();
         }
-    }, [firstPluginTraceLogs, pluginTraceLogs, refreshPluginTraceLogs]);
+    }, [firstPluginTraceLogs, pluginTraceLogs, refreshPluginTraceLogs, correlationId]);
 
     return (
         <ThemeProvider theme={theme}>
@@ -188,6 +198,18 @@ const PluginTraceLogsPane = React.memo((props: PluginTraceLogsPaneProps) => {
                                 }
                             />
                         </Tooltip>
+                    </Stack>
+                    <Stack direction="column">
+                        <FilterInput
+                            fullWidth
+                            returnFilterInput={setCorrelationId}
+                            placeholder="Correlation Id"
+                        />
+                        {correlationIdInvalid && (
+                            <Typography variant="caption" color="warning.main">
+                                Enter a full GUID to filter.
+                            </Typography>
+                        )}
                     </Stack>
                     <Stack direction="row" spacing={0.5}>
                         <DateTimePicker

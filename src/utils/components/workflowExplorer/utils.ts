@@ -2,7 +2,7 @@ import { debugError, getBapEnvironmentId } from "../../global/common";
 import { CloudFlowMessage, type CloudFlowTrigger } from "../../types/WorkflowExplorer";
 
 /** workflow.category values, verified against the workflow_category option set. */
-export const enum ProcessCategory {
+export enum ProcessCategory {
     Workflow = 0,
     Dialog = 1,
     BusinessRule = 2,
