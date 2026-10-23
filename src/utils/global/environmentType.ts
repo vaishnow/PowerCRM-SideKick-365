@@ -82,48 +82,58 @@ export async function retrieveEnvironment(): Promise<EnvironmentInfo> {
 
 export const STORAGE_EnvironmentTheme = "environmentTheme";
 
+export enum BarStyle {
+    None = "None",
+    Tint = "Tint",
+    Solid = "Solid"
+}
+
 export type EnvironmentStyle = {
     color: string;
     label: string;
+    barStyle: BarStyle;
+    /** 0 means no border. Capped at 10 by the editor. */
+    borderWidth: number;
+    showLabel: boolean;
 };
-/** Dataverse cannot distinguish a staging org from any other sandbox, so naming conventions are matched instead. */
-export type EnvironmentRule = EnvironmentStyle & {
-    id: string;
-    match: string;
-};
+
+/** An override only stores what was changed for that one environment, so every field is optional. */
+export type EnvironmentOverride = Partial<EnvironmentStyle>;
 
 export type TYPE_EnvironmentTheme = {
     enabled: boolean;
-    tintPanel: boolean;
-    pageBorder: boolean;
-    showLabel: boolean;
-    types: { [key in EnvironmentType]: EnvironmentStyle };
-    rules: EnvironmentRule[];
+    /** Keyed by organization url: stable, and the thing you can read straight off the address bar. */
+    overrides: { [organizationUrl: string]: EnvironmentOverride };
 };
 
 export const defaultEnvironmentTheme: TYPE_EnvironmentTheme = {
     enabled: true,
-    tintPanel: false,
-    pageBorder: false,
-    showLabel: true,
-    types: {
-        [EnvironmentType.Production]: { color: "#c62828", label: "PROD" },
-        [EnvironmentType.Sandbox]: { color: "#1565c0", label: "SANDBOX" },
-        [EnvironmentType.Trial]: { color: "#6a1b9a", label: "TRIAL" },
-        [EnvironmentType.Developer]: { color: "#00695c", label: "DEV" },
-        [EnvironmentType.Default]: { color: "#616161", label: "DEFAULT" },
-        [EnvironmentType.Unknown]: { color: "#c62828", label: "UNKNOWN" }
-    },
-    // "stg" is not contained in "staging", so both are seeded.
-    rules: [
-        { id: "staging-stg", match: "stg", color: "#546e7a", label: "STAGING" },
-        { id: "staging-staging", match: "staging", color: "#546e7a", label: "STAGING" }
-    ]
+    overrides: {}
 };
 
+const environmentTypeStyles: { [key in EnvironmentType]: Pick<EnvironmentStyle, "color" | "label"> } = {
+    [EnvironmentType.Production]: { color: "#c62828", label: "PROD" },
+    [EnvironmentType.Sandbox]: { color: "#1565c0", label: "SANDBOX" },
+    [EnvironmentType.Trial]: { color: "#6a1b9a", label: "TRIAL" },
+    [EnvironmentType.Developer]: { color: "#00695c", label: "DEV" },
+    [EnvironmentType.Default]: { color: "#616161", label: "DEFAULT" },
+    [EnvironmentType.Unknown]: { color: "#c62828", label: "UNKNOWN" }
+};
+
+const defaultStyleOptions = {
+    barStyle: BarStyle.None,
+    borderWidth: 0,
+    showLabel: true
+};
+
+/** What an environment looks like before anyone overrides it. Also what the editor starts from. */
+export function getEnvironmentDefaultStyle(environment: EnvironmentInfo | null): EnvironmentStyle {
+    return { ...environmentTypeStyles[environment?.type ?? EnvironmentType.Unknown], ...defaultStyleOptions };
+}
+
 /**
- * A matching rule wins over the detected type. The environment is Unknown while the detection
- * request is still in flight, which is coloured like Production on purpose.
+ * The detected type is the baseline, the per environment override wins over it. The environment is
+ * Unknown while detection is still in flight, which is coloured like Production on purpose.
  */
 export function resolveEnvironmentStyle(
     theme: TYPE_EnvironmentTheme,
@@ -133,15 +143,8 @@ export function resolveEnvironmentStyle(
         return null;
     }
 
-    if (environment) {
-        const haystack = `${environment.friendlyName} ${environment.uniqueName} ${environment.url}`.toLowerCase();
-        const matchedRule = theme.rules.find(
-            (rule) => rule.match.trim() !== "" && haystack.includes(rule.match.trim().toLowerCase())
-        );
-        if (matchedRule) {
-            return matchedRule;
-        }
-    }
-
-    return theme.types[environment?.type ?? EnvironmentType.Unknown];
+    return {
+        ...getEnvironmentDefaultStyle(environment),
+        ...(environment ? theme.overrides[environment.url] : undefined)
+    };
 }

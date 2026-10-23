@@ -38,6 +38,7 @@ import PanelDrawerItem from "../utils/components/PanelDrawer/PanelDrawerItem";
 import { debugLog, getBridgeEventName, GetExtensionId, isArraysEquals, setStyle } from "../utils/global/common";
 import MessageManager from "../utils/global/MessageManager";
 import {
+    BarStyle,
     defaultEnvironmentTheme,
     resolveEnvironmentStyle,
     STORAGE_EnvironmentTheme,
@@ -66,11 +67,7 @@ export const MainScreen: React.FunctionComponent = () => {
             key: STORAGE_EnvironmentTheme
         }).then(function (response: TYPE_EnvironmentTheme | null) {
             if (!response) return;
-            setEnvironmentTheme({
-                ...defaultEnvironmentTheme,
-                ...response,
-                types: { ...defaultEnvironmentTheme.types, ...response.types }
-            });
+            setEnvironmentTheme({ ...defaultEnvironmentTheme, ...response });
         });
     }, []);
 
@@ -100,7 +97,6 @@ export const MainScreen: React.FunctionComponent = () => {
                     <SpDevToolsContextProvider>
                         <MainScreenCustomPanel
                             environment={environment}
-                            environmentTheme={environmentTheme}
                             environmentStyle={environmentStyle}
                         />
                     </SpDevToolsContextProvider>
@@ -116,14 +112,21 @@ const MAIN_MENU_WIDTH = 322;
 
 type MainScreenCustomPanelProps = {
     environment: EnvironmentInfo | null;
-    environmentTheme: TYPE_EnvironmentTheme;
     environmentStyle: EnvironmentStyle | null;
 };
 
 const MainScreenCustomPanel: React.FunctionComponent<MainScreenCustomPanelProps> = (
     props: MainScreenCustomPanelProps
 ) => {
-    const { environment, environmentTheme, environmentStyle } = props;
+    const { environment, environmentStyle } = props;
+
+    // A solid bar paints over the primary colour, so its contents have to switch to the contrast colour.
+    const isSolidBar = environmentStyle?.barStyle === BarStyle.Solid;
+    const barBackground = isSolidBar
+        ? environmentStyle.color
+        : environmentStyle?.barStyle === BarStyle.Tint
+          ? alpha(environmentStyle.color, 0.08)
+          : "background.paper";
 
     const [isMainDrawerOpened, setIsMainDrawerOpened] = useState<boolean>(true);
 
@@ -198,11 +201,14 @@ const MainScreenCustomPanel: React.FunctionComponent<MainScreenCustomPanelProps>
     }, [panelOpenedId, isForegroundPanes, isMainDrawerOpened]);
 
     useEffect(() => {
-        const borderColor = environmentStyle && environmentTheme.pageBorder ? environmentStyle.color : "transparent";
+        const borderWidth = environmentStyle?.borderWidth ?? 0;
         setStyle(document, "environmenttypeborder", {
-            "#ApplicationShell": [`border: 3px solid ${borderColor}`, "box-sizing: border-box"]
+            "#ApplicationShell": [
+                `border: ${borderWidth}px solid ${environmentStyle?.color ?? "transparent"}`,
+                "box-sizing: border-box"
+            ]
         });
-    }, [environmentStyle, environmentTheme.pageBorder]);
+    }, [environmentStyle]);
 
     useEffect(() => {
         if (panelOpenedId && openedProcesses[panelOpenedId] && !openedProcesses[panelOpenedId].isPanelProcess) {
@@ -325,10 +331,7 @@ const MainScreenCustomPanel: React.FunctionComponent<MainScreenCustomPanelProps>
                 PaperProps={{
                     sx: {
                         width: DRAWER_BUTTON_CONTAINER_WIDTH,
-                        bgcolor:
-                            environmentStyle && environmentTheme.tintPanel
-                                ? alpha(environmentStyle.color, 0.08)
-                                : "background.paper"
+                        bgcolor: barBackground
                         // backgroundColor: "rgb(246,247,248)"
                     }
                 }}
@@ -358,7 +361,8 @@ const MainScreenCustomPanel: React.FunctionComponent<MainScreenCustomPanelProps>
                                     minWidth: "unset",
                                     aspectRatio: "1 / 1",
                                     borderRadius: 0,
-                                    boxShadow: "unset"
+                                    boxShadow: "unset",
+                                    color: isSolidBar ? "primary.contrastText" : undefined
                                 }}>
                                 <WandMainIcon sx={{ fontSize: 25 }} />
                             </Button>
@@ -416,10 +420,16 @@ const MainScreenCustomPanel: React.FunctionComponent<MainScreenCustomPanelProps>
                                                                         aspectRatio: "1 / 1",
                                                                         borderRadius: 0,
                                                                         boxShadow: "unset",
-                                                                        color:
-                                                                            panelOpenedId === process.prefixedId
-                                                                                ? "white"
-                                                                                : "black"
+                                                                        color: isSolidBar
+                                                                            ? "primary.contrastText"
+                                                                            : panelOpenedId === process.prefixedId
+                                                                              ? "white"
+                                                                              : "black",
+                                                                        // contained would fill with the bar colour
+                                                                        ...(isSolidBar &&
+                                                                            panelOpenedId === process.prefixedId && {
+                                                                                bgcolor: "rgba(0, 0, 0, 0.25)"
+                                                                            })
                                                                     }}>
                                                                     {hasBadge ? (
                                                                         <Badge
@@ -449,7 +459,7 @@ const MainScreenCustomPanel: React.FunctionComponent<MainScreenCustomPanelProps>
                             </Droppable>
                         </DragDropContext>
                     </Stack>
-                    {environmentStyle && environmentTheme.showLabel && (
+                    {environmentStyle?.showLabel && (
                         <Typography
                             variant="caption"
                             textAlign="center"

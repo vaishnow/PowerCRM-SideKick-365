@@ -1,4 +1,3 @@
-import DeleteIcon from "@mui/icons-material/Delete";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
@@ -6,23 +5,26 @@ import Checkbox from "@mui/material/Checkbox";
 import Divider from "@mui/material/Divider";
 import FormControl from "@mui/material/FormControl";
 import FormControlLabel from "@mui/material/FormControlLabel";
-import IconButton from "@mui/material/IconButton";
+import MenuItem from "@mui/material/MenuItem";
+import Slider from "@mui/material/Slider";
 import Stack from "@mui/material/Stack";
 import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
 import Tooltip, { type TooltipProps } from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import { forwardRef, useCallback, useEffect, useState } from "react";
+import { forwardRef, useCallback, useEffect, useMemo, useState } from "react";
 
 import { ProcessButton, type ProcessProps, type ProcessRef } from "../../utils/global/.processClass";
 import {
+    BarStyle,
     defaultEnvironmentTheme,
-    EnvironmentType,
+    getEnvironmentDefaultStyle,
     STORAGE_EnvironmentTheme,
-    type EnvironmentRule,
+    type EnvironmentStyle,
     type TYPE_EnvironmentTheme
 } from "../../utils/global/environmentType";
 import MessageManager from "../../utils/global/MessageManager";
+import { useEnvironment } from "../../utils/hooks/use/useEnvironment";
 import { MessageType } from "../../utils/types/Message";
 
 class EnvironmentThemeProcess extends ProcessButton {
@@ -37,7 +39,10 @@ const EnvironmentTheme = forwardRef<ProcessRef, ProcessProps>(function Environme
     props: ProcessProps,
     ref
 ) {
+    const environment = useEnvironment();
+
     const [environmentTheme, setEnvironmentTheme] = useState<TYPE_EnvironmentTheme>(defaultEnvironmentTheme);
+    const [style, setStyle] = useState<EnvironmentStyle | null>(null);
     const [configurationSaved, setConfigurationSaved] = useState<boolean>(false);
 
     useEffect(() => {
@@ -45,25 +50,55 @@ const EnvironmentTheme = forwardRef<ProcessRef, ProcessProps>(function Environme
             response: TYPE_EnvironmentTheme | null
         ) {
             if (!response) return;
-            setEnvironmentTheme({
-                ...defaultEnvironmentTheme,
-                ...response,
-                types: { ...defaultEnvironmentTheme.types, ...response.types }
-            });
+            setEnvironmentTheme({ ...defaultEnvironmentTheme, ...response });
         });
     }, []);
 
-    const saveConfiguration = useCallback(() => {
-        MessageManager.sendMessage(MessageType.SETCONFIGURATION, {
-            key: STORAGE_EnvironmentTheme,
-            configurations: environmentTheme
-        });
+    const defaultStyle = useMemo(() => getEnvironmentDefaultStyle(environment), [environment]);
 
-        setConfigurationSaved(true);
-        setTimeout(() => {
-            setConfigurationSaved(false);
-        }, 2000);
-    }, [environmentTheme]);
+    // The editor only opens once the environment is known, otherwise it would edit the wrong url.
+    useEffect(() => {
+        if (!environment) return;
+        setStyle({ ...defaultStyle, ...environmentTheme.overrides[environment.url] });
+    }, [environment, defaultStyle, environmentTheme]);
+
+    const saveConfiguration = useCallback(
+        (override: EnvironmentStyle | null) => {
+            if (!environment) return;
+
+            const overrides = { ...environmentTheme.overrides };
+            if (override) {
+                overrides[environment.url] = override;
+            } else {
+                delete overrides[environment.url];
+            }
+
+            const updatedTheme = { ...environmentTheme, overrides: overrides };
+            setEnvironmentTheme(updatedTheme);
+            MessageManager.sendMessage(MessageType.SETCONFIGURATION, {
+                key: STORAGE_EnvironmentTheme,
+                configurations: updatedTheme
+            });
+
+            setConfigurationSaved(true);
+            setTimeout(() => {
+                setConfigurationSaved(false);
+            }, 2000);
+        },
+        [environment, environmentTheme]
+    );
+
+    const setEnabled = useCallback(
+        (enabled: boolean) => {
+            const updatedTheme = { ...environmentTheme, enabled: enabled };
+            setEnvironmentTheme(updatedTheme);
+            MessageManager.sendMessage(MessageType.SETCONFIGURATION, {
+                key: STORAGE_EnvironmentTheme,
+                configurations: updatedTheme
+            });
+        },
+        [environmentTheme]
+    );
 
     return (
         <Stack direction="column" spacing={1} width="-webkit-fill-available" height="calc(100% - 20px)" padding="10px">
@@ -73,21 +108,14 @@ const EnvironmentTheme = forwardRef<ProcessRef, ProcessProps>(function Environme
                 </Typography>
             </Alert>
 
-            <Button variant="contained" onClick={saveConfiguration}>
-                {configurationSaved ? "Saved" : "Save Configuration"}
-            </Button>
-
-            <Divider />
-
             <HelpInfo
                 placement="left"
                 arrow
                 disableInteractive
                 title={
                     <Typography variant="body2">
-                        Colour the extension panel according to the environment type, so a Production environment is
-                        not mistaken for a Sandbox. An environment that cannot be identified uses the Production
-                        colour.
+                        Colour the extension panel according to the environment, so a Production environment is not
+                        mistaken for a Sandbox. An environment that cannot be identified uses the Production colour.
                     </Typography>
                 }>
                 <FormControl fullWidth sx={{ pl: 2 }}>
@@ -95,7 +123,7 @@ const EnvironmentTheme = forwardRef<ProcessRef, ProcessProps>(function Environme
                         control={
                             <Switch
                                 checked={environmentTheme.enabled}
-                                onChange={() => setEnvironmentTheme((prev) => ({ ...prev, enabled: !prev.enabled }))}
+                                onChange={(event) => setEnabled(event.target.checked)}
                             />
                         }
                         label="Environment Colours"
@@ -103,168 +131,84 @@ const EnvironmentTheme = forwardRef<ProcessRef, ProcessProps>(function Environme
                 </FormControl>
             </HelpInfo>
 
-            {environmentTheme.enabled && (
-                <Stack direction="column" pl={2} overflow="auto">
-                    <FormControlLabel
-                        control={
-                            <Checkbox
-                                size="small"
-                                checked={environmentTheme.tintPanel}
-                                onChange={() =>
-                                    setEnvironmentTheme((prev) => ({ ...prev, tintPanel: !prev.tintPanel }))
-                                }
-                            />
-                        }
-                        label={<Typography variant="body2">Tint the tools bar</Typography>}
-                    />
-                    <FormControlLabel
-                        control={
-                            <Checkbox
-                                size="small"
-                                checked={environmentTheme.showLabel}
-                                onChange={() =>
-                                    setEnvironmentTheme((prev) => ({ ...prev, showLabel: !prev.showLabel }))
-                                }
-                            />
-                        }
-                        label={<Typography variant="body2">Show the environment type</Typography>}
-                    />
-                    <FormControlLabel
-                        control={
-                            <Checkbox
-                                size="small"
-                                checked={environmentTheme.pageBorder}
-                                onChange={() =>
-                                    setEnvironmentTheme((prev) => ({ ...prev, pageBorder: !prev.pageBorder }))
-                                }
-                            />
-                        }
-                        label={<Typography variant="body2">Border around the Dynamics page</Typography>}
-                    />
+            <Divider />
 
-                    <Typography variant="caption" pt={1}>
-                        Detected environment types
+            {!environment && <Typography variant="body2">Identifying the current environment...</Typography>}
+
+            {environment && style && (
+                <Stack direction="column" spacing={1} overflow="auto">
+                    <Typography variant="caption">Settings for this environment only</Typography>
+                    <Typography variant="body2" fontWeight="bold">
+                        {environment.friendlyName}
                     </Typography>
-                    {Object.values(EnvironmentType).map((environmentType) => (
-                        <Stack
-                            key={`environmentType_${environmentType}`}
-                            direction="row"
-                            spacing={1}
-                            alignItems="center"
-                            pr={1}>
-                            <Typography variant="body2" width="40%" noWrap>
-                                {environmentType}
-                            </Typography>
-                            <TextField
-                                size="small"
-                                fullWidth
-                                value={environmentTheme.types[environmentType].label}
-                                onChange={(event) => {
-                                    const label = event.target.value;
-                                    setEnvironmentTheme((prev) => ({
-                                        ...prev,
-                                        types: {
-                                            ...prev.types,
-                                            [environmentType]: { ...prev.types[environmentType], label: label }
-                                        }
-                                    }));
-                                }}
-                            />
-                            <input
-                                type="color"
-                                value={environmentTheme.types[environmentType].color}
-                                onChange={(event) => {
-                                    const color = event.target.value;
-                                    setEnvironmentTheme((prev) => ({
-                                        ...prev,
-                                        types: {
-                                            ...prev.types,
-                                            [environmentType]: { ...prev.types[environmentType], color: color }
-                                        }
-                                    }));
-                                }}
-                            />
-                        </Stack>
-                    ))}
+                    <Typography variant="caption" sx={{ wordBreak: "break-all" }}>
+                        {environment.url}
+                    </Typography>
+                    <Typography variant="caption">Detected as {environment.type}</Typography>
 
-                    <HelpInfo
-                        placement="left"
-                        arrow
-                        disableInteractive
-                        title={
-                            <Typography variant="body2">
-                                Dynamics cannot tell a staging environment apart from any other sandbox. A rule matches
-                                its text anywhere in the environment name or url, and the first matching rule wins over
-                                the detected type. The tools bar tooltip keeps showing the real type.
-                            </Typography>
-                        }>
-                        <Typography variant="caption" pt={1}>
-                            Name matching rules
+                    <Stack direction="row" spacing={1} alignItems="center" pt={1}>
+                        <TextField
+                            size="small"
+                            fullWidth
+                            label="Text"
+                            value={style.label}
+                            onChange={(event) => setStyle({ ...style, label: event.target.value })}
+                        />
+                        <input
+                            type="color"
+                            value={style.color}
+                            onChange={(event) => setStyle({ ...style, color: event.target.value })}
+                        />
+                    </Stack>
+
+                    <TextField
+                        select
+                        size="small"
+                        fullWidth
+                        label="Tools bar"
+                        value={style.barStyle}
+                        onChange={(event) => setStyle({ ...style, barStyle: event.target.value as BarStyle })}>
+                        <MenuItem value={BarStyle.None}>None</MenuItem>
+                        <MenuItem value={BarStyle.Tint}>Tint</MenuItem>
+                        <MenuItem value={BarStyle.Solid}>Solid colour</MenuItem>
+                    </TextField>
+
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                size="small"
+                                checked={style.showLabel}
+                                onChange={(event) => setStyle({ ...style, showLabel: event.target.checked })}
+                            />
+                        }
+                        label={<Typography variant="body2">Show the text in the tools bar</Typography>}
+                    />
+                    <Stack direction="column" pr={1}>
+                        <Typography variant="body2">
+                            Border around the Dynamics page: {style.borderWidth}px
                         </Typography>
-                    </HelpInfo>
-                    {environmentTheme.rules.map((rule) => (
-                        <Stack key={`environmentRule_${rule.id}`} direction="row" spacing={1} alignItems="center">
-                            <TextField
-                                size="small"
-                                fullWidth
-                                label="Match"
-                                value={rule.match}
-                                onChange={(event) => {
-                                    const match = event.target.value;
-                                    setEnvironmentTheme((prev) => ({
-                                        ...prev,
-                                        rules: prev.rules.map((r) => (r.id === rule.id ? { ...r, match: match } : r))
-                                    }));
-                                }}
-                            />
-                            <TextField
-                                size="small"
-                                fullWidth
-                                label="Text"
-                                value={rule.label}
-                                onChange={(event) => {
-                                    const label = event.target.value;
-                                    setEnvironmentTheme((prev) => ({
-                                        ...prev,
-                                        rules: prev.rules.map((r) => (r.id === rule.id ? { ...r, label: label } : r))
-                                    }));
-                                }}
-                            />
-                            <input
-                                type="color"
-                                value={rule.color}
-                                onChange={(event) => {
-                                    const color = event.target.value;
-                                    setEnvironmentTheme((prev) => ({
-                                        ...prev,
-                                        rules: prev.rules.map((r) => (r.id === rule.id ? { ...r, color: color } : r))
-                                    }));
-                                }}
-                            />
-                            <IconButton
-                                size="small"
-                                onClick={() =>
-                                    setEnvironmentTheme((prev) => ({
-                                        ...prev,
-                                        rules: prev.rules.filter((r) => r.id !== rule.id)
-                                    }))
-                                }>
-                                <DeleteIcon fontSize="small" />
-                            </IconButton>
-                        </Stack>
-                    ))}
+                        <Slider
+                            size="small"
+                            min={0}
+                            max={10}
+                            step={1}
+                            marks
+                            valueLabelDisplay="auto"
+                            value={style.borderWidth}
+                            onChange={(event, value) => setStyle({ ...style, borderWidth: value as number })}
+                        />
+                    </Stack>
+
+                    <Button variant="contained" onClick={() => saveConfiguration(style)}>
+                        {configurationSaved ? "Saved" : "Save for this environment"}
+                    </Button>
                     <Button
                         size="small"
                         onClick={() => {
-                            const newRule: EnvironmentRule = {
-                                id: crypto.randomUUID(),
-                                match: "",
-                                label: "",
-                                color: "#616161"
-                            };
-                            setEnvironmentTheme((prev) => ({ ...prev, rules: [...prev.rules, newRule] }));
+                            setStyle(defaultStyle);
+                            saveConfiguration(null);
                         }}>
-                        Add rule
+                        Reset to detected default
                     </Button>
                 </Stack>
             )}
