@@ -13,6 +13,7 @@ import navigation from "./navigation/button";
 import optionSetTable from "./optionSetTable/button";
 import pluginTraceLogsExplorer from "./pluginTraceLogsExplorer/button";
 import relatedRecords from "./relatedRecords/button";
+import securityExplorer from "./securityExplorer/button";
 import createConfiguration from "./setConfiguration/button";
 import updateRecord from "./updateRecord/button";
 import userSecurity from "./userSecurity/button";
@@ -30,6 +31,7 @@ export const ToolPanelButtonList: ToolPanelButton[] = [
     new entitiesList(),
     new impersonation(),
     new userSecurity(),
+    new securityExplorer(),
     // // ...(TARGET === ExtensionTarget.Chrome ? [webResourceEditor] : []),
     new webResourceEditor(),
     new pluginTraceLogsExplorer(),
