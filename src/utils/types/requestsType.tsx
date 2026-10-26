@@ -141,6 +141,7 @@ export type AttributeMetadata = {
         Precision: number,
         MaxLength: number,
         Target: string,
+        Targets: string[],
         Format: string
     }
 }
