@@ -1,7 +1,17 @@
+import DynamicFormIcon from "@mui/icons-material/DynamicForm";
+import DynamicFormOutlinedIcon from "@mui/icons-material/DynamicFormOutlined";
+import EditNoteIcon from "@mui/icons-material/EditNote";
+import EditNoteOutlinedIcon from "@mui/icons-material/EditNoteOutlined";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
+import ExtensionIcon from "@mui/icons-material/Extension";
+import ExtensionOutlinedIcon from "@mui/icons-material/ExtensionOutlined";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
+import TextFieldsIcon from "@mui/icons-material/TextFields";
+import TextFieldsOutlinedIcon from "@mui/icons-material/TextFieldsOutlined";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
@@ -11,23 +21,29 @@ import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
+import MenuItem from "@mui/material/MenuItem";
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import JsonView from "@uiw/react-json-view";
+import { useSnackbar } from "notistack";
 import { vscodeTheme } from "@uiw/react-json-view/vscode";
 import React, { forwardRef, useCallback, useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom";
-import { useBoolean, useCopyToClipboard } from "usehooks-ts";
+import { useBoolean, useCopyToClipboard, useLocalStorage } from "usehooks-ts";
 
 import CopyMenu from "../../utils/components/CopyMenu";
 import DontShowInfo from "../../utils/components/DontShowInfo";
 import FilterInput from "../../utils/components/FilterInput";
 import MuiVirtuoso from "../../utils/components/MuiVirtuoso";
 import { ProcessButton, type ProcessProps, type ProcessRef } from "../../utils/global/.processClass";
+import { formatId, getWebApiBaseUrl } from "../../utils/global/common";
+import { PROJECT_PREFIX } from "../../utils/global/var";
 import useCopyWithSnack from "../../utils/hooks/use/useCopyWithSnack";
 import { useCurrentRecord } from "../../utils/hooks/use/useCurrentRecord";
+import { useFormContextDocument } from "../../utils/hooks/use/useFormContextDocument";
 import { RetrieveAllAttributes } from "../../utils/hooks/XrmApi/RetrieveAllAttributes";
+import { RetrieveSetName } from "../../utils/hooks/XrmApi/RetrieveSetName";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import Checkbox from "@mui/material/Checkbox";
@@ -101,6 +117,12 @@ const jsonStyle: React.CSSProperties = {
     overflowWrap: "break-word"
 };
 
+type FormFilters = { onForm: boolean; notOnForm: boolean; custom: boolean; dirty: boolean };
+
+function toLogicalName(key: string) {
+    return key.split("@")[0].replace(/^_(.+)_value$/, "$1");
+}
+
 type AttributeSetType = {
     [attributeName: string]: {
         value: { value: any; selector: string };
@@ -116,9 +138,88 @@ const AllFieldsButtonProcess = forwardRef<ProcessRef, ProcessProps>(function All
 
     const { entityName, recordId, forceRefresh } = useCurrentRecord();
 
-    const [attributes, isFetching] = RetrieveAllAttributes(entityName ?? "", recordId);
+    const [includeAnnotations, setIncludeAnnotations] = useLocalStorage<boolean>(
+        PROJECT_PREFIX + "allfields-annotations",
+        false
+    );
+    const [attributes, isFetching] = RetrieveAllAttributes(entityName ?? "", recordId, includeAnnotations);
+    const setName = RetrieveSetName(entityName ?? "");
+
+    const openInWebApi = useMemo(
+        () =>
+            setName && recordId
+                ? () => window.open(`${getWebApiBaseUrl()}${setName}(${formatId(recordId)})`)
+                : undefined,
+        [setName, recordId]
+    );
 
     const [notNullOnly, setNotNullOnly] = useState<boolean>(false);
+
+    const { formContext } = useFormContextDocument();
+    const { enqueueSnackbar } = useSnackbar();
+    const [formFilters, setFormFilters] = useState<FormFilters>({
+        onForm: false,
+        notOnForm: false,
+        custom: false,
+        dirty: false
+    });
+
+    const [customAttributes, setCustomAttributes] = useState<Set<string> | null>(null);
+    useEffect(() => {
+        setCustomAttributes(null);
+        if (!formFilters.custom || !entityName) return;
+        fetch(
+            `${getWebApiBaseUrl()}EntityDefinitions(LogicalName='${entityName}')/Attributes?$select=LogicalName&$filter=IsCustomAttribute eq true`,
+            { headers: { Accept: "application/json" } }
+        )
+            .then((response) => response.json())
+            .then((result) => setCustomAttributes(new Set(result.value?.map((a: any) => a.LogicalName))));
+    }, [formFilters.custom, entityName]);
+
+    const matchesFormFilters = useCallback(
+        (key: string) => {
+            const name = toLogicalName(key);
+            const attribute = formContext?.getAttribute(name);
+            const isOnForm = (attribute?.controls.getLength() ?? 0) > 0;
+            if (formFilters.onForm && !isOnForm) return false;
+            if (formFilters.notOnForm && isOnForm) return false;
+            if (formFilters.dirty && !attribute?.getIsDirty()) return false;
+            if (formFilters.custom && !customAttributes?.has(name)) return false;
+            return true;
+        },
+        [formContext, formFilters, customAttributes]
+    );
+
+    const focusOnForm = useCallback(
+        (key: string) => {
+            const name = toLogicalName(key);
+            const controls = formContext?.getAttribute(name)?.controls.get() as
+                | Xrm.Controls.StandardControl[]
+                | undefined;
+            const control = controls?.find((c) => c.getVisible()) ?? controls?.[0];
+            if (!control) {
+                enqueueSnackbar(`${name} is not on the form.`, { variant: "warning" });
+                return;
+            }
+            const section = control.getParent();
+            const tab = section?.getParent();
+            const hidden = !control.getVisible()
+                ? "field"
+                : section?.getVisible() === false
+                  ? "section"
+                  : tab?.getVisible() === false
+                    ? "tab"
+                    : null;
+            if (hidden) {
+                enqueueSnackbar(`${name} is not visible (hidden ${hidden}).`, { variant: "warning" });
+                return;
+            }
+            tab?.setDisplayState("expanded");
+            tab?.setFocus();
+            control.setFocus();
+        },
+        [formContext, enqueueSnackbar]
+    );
 
     const [filter, setFilter] = useState<string>("");
     const [forceOpenAll, setForceOpenAll] = useState<boolean>(false);
@@ -145,13 +246,14 @@ const AllFieldsButtonProcess = forwardRef<ProcessRef, ProcessProps>(function All
         return Object.entries(attributes).reduce<{ [key: string]: any }>((acc, [key, value]) => {
             if (
                 (!notNullOnly || (value !== null && value !== undefined)) &&
+                matchesFormFilters(key) &&
                 (key.toLowerCase().includes(filterLower) || value?.toString().toLowerCase().includes(filterLower))
             ) {
                 acc[key] = attributes[key];
             }
             return acc;
         }, {});
-    }, [attributes, filter, notNullOnly]);
+    }, [attributes, filter, notNullOnly, matchesFormFilters]);
 
     const attributesRawFilteredString = useMemo(() => {
         return JSON.stringify(attributesRawFiltered, null, 2);
@@ -217,6 +319,7 @@ const AllFieldsButtonProcess = forwardRef<ProcessRef, ProcessProps>(function All
             Object.entries(attributesSet).filter(
                 ([key, values]) =>
                     (!notNullOnly || (values.value.value !== null && values.value.value !== undefined)) &&
+                    matchesFormFilters(key) &&
                     (key.toLowerCase().includes(lowerFilter) ||
                         String(values.value.value).toLowerCase().includes(lowerFilter) ||
                         Object.entries(values).some(([innerKey, innerValue]) =>
@@ -224,7 +327,7 @@ const AllFieldsButtonProcess = forwardRef<ProcessRef, ProcessProps>(function All
                         ))
             )
         );
-    }, [attributesSet, filter, notNullOnly]);
+    }, [attributesSet, filter, notNullOnly, matchesFormFilters]);
 
     const openRawInTab = useCallback(() => {
         var newTab = window.open();
@@ -274,6 +377,12 @@ const AllFieldsButtonProcess = forwardRef<ProcessRef, ProcessProps>(function All
                     setFilter={setFilter}
                     notNullOnly={notNullOnly}
                     setNotNullOnly={setNotNullOnly}
+                    includeAnnotations={includeAnnotations}
+                    setIncludeAnnotations={setIncludeAnnotations}
+                    openInWebApi={openInWebApi}
+                    formFilters={formFilters}
+                    setFormFilters={setFormFilters}
+                    hasFormContext={!!formContext}
                 />
             ) : (
                 <AttributeList
@@ -290,6 +399,13 @@ const AllFieldsButtonProcess = forwardRef<ProcessRef, ProcessProps>(function All
                     setFilter={setFilter}
                     notNullOnly={notNullOnly}
                     setNotNullOnly={setNotNullOnly}
+                    includeAnnotations={includeAnnotations}
+                    setIncludeAnnotations={setIncludeAnnotations}
+                    openInWebApi={openInWebApi}
+                    formFilters={formFilters}
+                    setFormFilters={setFormFilters}
+                    hasFormContext={!!formContext}
+                    focusOnForm={focusOnForm}
                 />
             )}
         </ThemeProvider>
@@ -297,9 +413,30 @@ const AllFieldsButtonProcess = forwardRef<ProcessRef, ProcessProps>(function All
 });
 
 function AttributeListFilter(
-    props: Pick<AttributeListCommonProps, "filter" | "setFilter" | "notNullOnly" | "setNotNullOnly">
+    props: Pick<
+        AttributeListCommonProps,
+        | "filter"
+        | "setFilter"
+        | "notNullOnly"
+        | "setNotNullOnly"
+        | "includeAnnotations"
+        | "setIncludeAnnotations"
+        | "formFilters"
+        | "setFormFilters"
+        | "hasFormContext"
+    >
 ) {
-    const { filter, setFilter, notNullOnly, setNotNullOnly } = props;
+    const {
+        filter,
+        setFilter,
+        notNullOnly,
+        setNotNullOnly,
+        includeAnnotations,
+        setIncludeAnnotations,
+        formFilters,
+        setFormFilters,
+        hasFormContext
+    } = props;
 
     return (
         <Stack direction="row" spacing={0.5} width="100%" alignItems="center">
@@ -320,7 +457,73 @@ function AttributeListFilter(
                     checkedIcon={<FactCheckIcon color="primary" />}
                 />
             </Tooltip>
+
+            <Tooltip title={<Typography>Show formatted values & annotations</Typography>}>
+                <Checkbox
+                    checked={includeAnnotations}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                        setIncludeAnnotations(event.target.checked);
+                    }}
+                    icon={<TextFieldsOutlinedIcon />}
+                    checkedIcon={<TextFieldsIcon color="primary" />}
+                />
+            </Tooltip>
+
+            <FormFilterToggle
+                title="Show only fields on the form"
+                checked={formFilters.onForm}
+                disabled={!hasFormContext}
+                onChange={(checked) => setFormFilters((f) => ({ ...f, onForm: checked, notOnForm: false }))}
+                icon={<DynamicFormOutlinedIcon />}
+                checkedIcon={<DynamicFormIcon color="primary" />}
+            />
+            <FormFilterToggle
+                title="Show only fields not on the form"
+                checked={formFilters.notOnForm}
+                disabled={!hasFormContext}
+                onChange={(checked) => setFormFilters((f) => ({ ...f, notOnForm: checked, onForm: false }))}
+                icon={<VisibilityOffOutlinedIcon />}
+                checkedIcon={<VisibilityOffIcon color="primary" />}
+            />
+            <FormFilterToggle
+                title="Show only custom fields"
+                checked={formFilters.custom}
+                onChange={(checked) => setFormFilters((f) => ({ ...f, custom: checked }))}
+                icon={<ExtensionOutlinedIcon />}
+                checkedIcon={<ExtensionIcon color="primary" />}
+            />
+            <FormFilterToggle
+                title="Show only unsaved changes (dirty fields)"
+                checked={formFilters.dirty}
+                disabled={!hasFormContext}
+                onChange={(checked) => setFormFilters((f) => ({ ...f, dirty: checked }))}
+                icon={<EditNoteOutlinedIcon />}
+                checkedIcon={<EditNoteIcon color="primary" />}
+            />
         </Stack>
+    );
+}
+
+function FormFilterToggle(props: {
+    title: string;
+    checked: boolean;
+    disabled?: boolean;
+    onChange: (checked: boolean) => void;
+    icon: React.ReactNode;
+    checkedIcon: React.ReactNode;
+}) {
+    return (
+        <Tooltip title={<Typography>{props.title}</Typography>}>
+            <span>
+                <Checkbox
+                    checked={props.checked}
+                    disabled={props.disabled}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => props.onChange(event.target.checked)}
+                    icon={props.icon}
+                    checkedIcon={props.checkedIcon}
+                />
+            </span>
+        </Tooltip>
     );
 }
 
@@ -332,9 +535,16 @@ interface AttributeListCommonProps {
     setFilter: React.Dispatch<React.SetStateAction<string>>;
     notNullOnly: boolean;
     setNotNullOnly: React.Dispatch<React.SetStateAction<boolean>>;
+    includeAnnotations: boolean;
+    setIncludeAnnotations: React.Dispatch<React.SetStateAction<boolean>>;
+    openInWebApi?: () => void;
+    formFilters: FormFilters;
+    setFormFilters: React.Dispatch<React.SetStateAction<FormFilters>>;
+    hasFormContext: boolean;
 }
 interface AttributeListProps {
     processId: string;
+    focusOnForm: (key: string) => void;
     toggleForceOpen: () => void;
     toggleForceClose: () => void;
     forceOpenAll: boolean;
@@ -370,7 +580,13 @@ const AttributeListRaw = React.memo((props: AttributeListRawProps & AttributeLis
         filter,
         setFilter,
         notNullOnly,
-        setNotNullOnly
+        setNotNullOnly,
+        includeAnnotations,
+        setIncludeAnnotations,
+        openInWebApi,
+        formFilters,
+        setFormFilters,
+        hasFormContext
     } = props;
 
     return (
@@ -386,6 +602,9 @@ const AttributeListRaw = React.memo((props: AttributeListRawProps & AttributeLis
                 <ButtonGroup variant="contained" fullWidth size="small">
                     <Button onClick={copyRawInClipboard}>{copying ? "Copied!" : "Copy"}</Button>
                     <Button onClick={openRawInTab}>Open in tab</Button>
+                    <Button onClick={openInWebApi} disabled={!openInWebApi}>
+                        Open in WebAPI
+                    </Button>
                     <Button onClick={forceRefresh}>Refresh</Button>
                     <Button onClick={toggleShowRaw}>Hide Raw</Button>
                 </ButtonGroup>
@@ -395,6 +614,11 @@ const AttributeListRaw = React.memo((props: AttributeListRawProps & AttributeLis
                     setFilter={setFilter}
                     notNullOnly={notNullOnly}
                     setNotNullOnly={setNotNullOnly}
+                    includeAnnotations={includeAnnotations}
+                    setIncludeAnnotations={setIncludeAnnotations}
+                    formFilters={formFilters}
+                    setFormFilters={setFormFilters}
+                    hasFormContext={hasFormContext}
                 />
 
                 <Box height="calc(100% - 80px)" width="100%">
@@ -419,6 +643,7 @@ const AttributeListRaw = React.memo((props: AttributeListRawProps & AttributeLis
 const AttributeList = React.memo((props: AttributeListProps & AttributeListCommonProps) => {
     const {
         processId,
+        focusOnForm,
         attributesSetFiltered,
         forceRefresh,
         isFetching,
@@ -430,7 +655,13 @@ const AttributeList = React.memo((props: AttributeListProps & AttributeListCommo
         filter,
         setFilter,
         notNullOnly,
-        setNotNullOnly
+        setNotNullOnly,
+        includeAnnotations,
+        setIncludeAnnotations,
+        openInWebApi,
+        formFilters,
+        setFormFilters,
+        hasFormContext
     } = props;
 
     return (
@@ -457,6 +688,9 @@ const AttributeList = React.memo((props: AttributeListProps & AttributeListCommo
                 })}>
                     <Button onClick={toggleForceOpen}>Open All</Button>
                     <Button onClick={toggleForceClose}>Close All</Button>
+                    <Button onClick={openInWebApi} disabled={!openInWebApi}>
+                        Open in WebAPI
+                    </Button>
                     <Button onClick={forceRefresh}>Refresh</Button>
                     <Button onClick={toggleShowRaw}>Show Raw</Button>
                 </ButtonGroup>
@@ -466,6 +700,11 @@ const AttributeList = React.memo((props: AttributeListProps & AttributeListCommo
                     setFilter={setFilter}
                     notNullOnly={notNullOnly}
                     setNotNullOnly={setNotNullOnly}
+                    includeAnnotations={includeAnnotations}
+                    setIncludeAnnotations={setIncludeAnnotations}
+                    formFilters={formFilters}
+                    setFormFilters={setFormFilters}
+                    hasFormContext={hasFormContext}
                 />
 
                 <DontShowInfo storageName={`${processId}-maininfo`}>
@@ -498,6 +737,7 @@ const AttributeList = React.memo((props: AttributeListProps & AttributeListCommo
                                         key={"attributelistitem" + index}
                                         attributeName={key}
                                         values={value}
+                                        focusOnForm={hasFormContext ? focusOnForm : undefined}
                                     />
                                 );
                             }}
@@ -510,6 +750,7 @@ const AttributeList = React.memo((props: AttributeListProps & AttributeListCommo
 });
 
 interface AttributeListItemProps {
+    focusOnForm?: (key: string) => void;
     forceOpen: boolean;
     forceClose: boolean;
     attributeName: string;
@@ -526,6 +767,7 @@ const AttributeListItem = React.memo((props: AttributeListItemProps) => {
         forceOpen,
         forceClose,
         attributeName,
+        focusOnForm,
         values: { value, ...otherValues }
     } = props;
 
@@ -562,7 +804,7 @@ const AttributeListItem = React.memo((props: AttributeListItemProps) => {
 
     const copyContent = useMemo(
         () => [
-            { title: "logicalname", content: attributeName },
+            { title: "logicalname", content: toLogicalName(attributeName) },
             { title: "value", content: value?.value }
         ],
         [attributeName, value]
@@ -578,7 +820,17 @@ const AttributeListItem = React.memo((props: AttributeListItemProps) => {
                 <ListItemText title={attributeName} primary={attributeName} secondary={!open ? valueDisplay : null} />
                 {open ? <ExpandLess /> : <ExpandMore />}
             </ListItemButton>
-            <CopyMenu anchorElement={anchorEl} onClose={handleCloseContextualMenu} items={copyContent} />
+            <CopyMenu anchorElement={anchorEl} onClose={handleCloseContextualMenu} items={copyContent}>
+                {focusOnForm && (
+                    <MenuItem
+                        onClick={() => {
+                            handleCloseContextualMenu();
+                            focusOnForm(attributeName);
+                        }}>
+                        Focus on form
+                    </MenuItem>
+                )}
+            </CopyMenu>
 
             <Collapse in={open} mountOnEnter unmountOnExit>
                 <Divider variant="middle" />

@@ -223,6 +223,9 @@ export function getCurrentDynamics365DateTimeFormat() {
     return {
         ShortDatePattern: shortDatePattern,
         ShortDateTimePattern: shortDatePattern + " " + dateFormattingInfo.ShortTimePattern.replace(/\btt\b/, "A"),
+        /** The short date with the org's long time pattern: the only built-in one with seconds. */
+        ShortDateTimeSecondsPattern:
+            shortDatePattern + " " + dateFormattingInfo.LongTimePattern.replace(/\btt\b/, "A"),
         is12hours: dateFormattingInfo.ShortTimePattern.includes("tt"),
         FullDateTimePattern: dateFormattingInfo.FullDateTimePattern.replace(/\byyyy\b/, "YYYY")
             .replace(/\bdd\b/, "DD")
@@ -250,6 +253,11 @@ export function getBridgeEventName(toolId: string) {
 
 export function getRecordUrl(entityName: string, recordId: string) {
     return `${window.location.origin}${window.location.pathname}?pagetype=entityrecord&etn=${entityName}&id=${recordId}`;
+}
+
+export function getWebApiBaseUrl() {
+    const [major, minor] = Xrm.Utility.getGlobalContext().getVersion().split(".");
+    return `${Xrm.Utility.getGlobalContext().getClientUrl()}/api/data/v${major}.${minor}/`;
 }
 
 export function getBapEnvironmentId(): string | undefined {

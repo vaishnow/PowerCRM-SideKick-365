@@ -15,6 +15,7 @@ import { forwardRef, useEffect, useMemo, useState, type ReactNode } from "react"
 import DontShowInfo from "../../utils/components/DontShowInfo";
 import { ProcessButton, type ProcessProps, type ProcessRef } from "../../utils/global/.processClass";
 import { useFormContextDocument } from "../../utils/hooks/use/useFormContextDocument";
+import { readFormComponents, resolveAffected, type FormComponents } from "./formComponents";
 import {
     buildFlagsUrl,
     countActiveFlags,
@@ -109,6 +110,59 @@ function IndexRangeFields(props: { range: IndexRange; onChange: (range: IndexRan
     );
 }
 
+const MONITOR_HINT = "Could not read this form's component list. Get indices from the FormEvents operation in Monitor.";
+const BUSINESS_RULE_HINT =
+    "Could not read the business rules. Per-rule indices also need the one-time business rule refresh described in the Microsoft documentation.";
+
+function AffectedPreview(props: {
+    components: FormComponents | null;
+    kind: "handlers" | "libraries";
+    event: HandlerEvent;
+    range: IndexRange;
+}) {
+    const { components, kind, event, range } = props;
+
+    if (!components) {
+        return (
+            <Stack width="100%">
+                <Typography variant="caption" color="text.secondary">
+                    {MONITOR_HINT}
+                </Typography>
+            </Stack>
+        );
+    }
+
+    if (kind === "handlers" && event === "businessrule" && !components.businessRules) {
+        return (
+            <Stack width="100%">
+                <Typography variant="caption" color="text.secondary">
+                    {BUSINESS_RULE_HINT}
+                </Typography>
+            </Stack>
+        );
+    }
+
+    const { items, note } = resolveAffected(components, kind, event, range);
+
+    return (
+        <Stack width="100%">
+            <Typography variant="caption" color="text.secondary">
+                {items.length ? "Will disable:" : "Nothing matches this index."}
+            </Typography>
+            {items.map((item) => (
+                <Typography key={item} variant="caption" sx={{ wordBreak: "break-word" }}>
+                    {item}
+                </Typography>
+            ))}
+            {note && (
+                <Typography variant="caption" color="warning.main">
+                    {note}
+                </Typography>
+            )}
+        </Stack>
+    );
+}
+
 const FormFlagsButtonProcess = forwardRef<ProcessRef, ProcessProps>(function FormFlagsButtonProcess(
     props: ProcessProps,
     ref
@@ -124,6 +178,12 @@ const FormFlagsButtonProcess = forwardRef<ProcessRef, ProcessProps>(function For
     );
     const isDirty = nextUrl !== window.location.href;
     const error = validateFlags(pending);
+
+    const components = useMemo(
+        () => readFormComponents(formContext),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [formContext, d365MainAndIframeUpdated]
+    );
 
     const controlNames = useMemo(() => {
         if (!formContext) {
@@ -192,6 +252,12 @@ const FormFlagsButtonProcess = forwardRef<ProcessRef, ProcessProps>(function For
                             onChange={(range) => setFlag("handlers", { ...pending.handlers, ...range })}
                             error={validateRange(pending.handlers)}
                         />
+                        <AffectedPreview
+                            components={components}
+                            kind="handlers"
+                            event={pending.handlers.event}
+                            range={pending.handlers}
+                        />
                     </FlagRow>
 
                     <FlagRow
@@ -202,6 +268,12 @@ const FormFlagsButtonProcess = forwardRef<ProcessRef, ProcessProps>(function For
                             range={pending.libraries}
                             onChange={(range) => setFlag("libraries", { ...pending.libraries, ...range })}
                             error={validateRange(pending.libraries)}
+                        />
+                        <AffectedPreview
+                            components={components}
+                            kind="libraries"
+                            event="true"
+                            range={pending.libraries}
                         />
                     </FlagRow>
 

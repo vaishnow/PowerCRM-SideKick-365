@@ -2,10 +2,13 @@ import { ToolPanelButton } from "~utils/global/.toolPanelButton";
 
 import { type StorageConfiguration } from "../utils/types/StorageConfiguration";
 import allFields from "./allFields/button";
+import auditHistory from "./auditHistory/button";
 import commandDebugger from "./commandDebugger/button";
 import customApiRunner from "./customApiRunner/button";
 import dirtyFields from "./dirtyFields/button";
 import entitiesList from "./entitiesList/button";
+import fetchXmlBuilder from "./fetchXmlBuilder/button";
+import environmentTheme from "./environmentTheme/button";
 import formFlags from "./formFlags/button";
 import formToolsV2 from "./formToolsv2/button";
 import impersonation from "./impersonation/button";
@@ -14,8 +17,10 @@ import navigation from "./navigation/button";
 import optionSetTable from "./optionSetTable/button";
 import pluginTraceLogsExplorer from "./pluginTraceLogsExplorer/button";
 import relatedRecords from "./relatedRecords/button";
+import securityExplorer from "./securityExplorer/button";
 import createConfiguration from "./setConfiguration/button";
 import updateRecord from "./updateRecord/button";
+import userSecurity from "./userSecurity/button";
 import webResourceEditor from "./webResourceEditor/button";
 import workflowExplorer from "./workflowExplorer/button";
 
@@ -27,8 +32,11 @@ export const ToolPanelButtonList: ToolPanelButton[] = [
     new optionSetTable(),
     new dirtyFields(),
     new relatedRecords(),
+    new auditHistory(),
     new entitiesList(),
     new impersonation(),
+    new userSecurity(),
+    new securityExplorer(),
     // // ...(TARGET === ExtensionTarget.Chrome ? [webResourceEditor] : []),
     new webResourceEditor(),
     new pluginTraceLogsExplorer(),
@@ -38,6 +46,8 @@ export const ToolPanelButtonList: ToolPanelButton[] = [
     new formFlags(),
     new workflowExplorer(),
     new customApiRunner(),
+    new fetchXmlBuilder(),
+    new environmentTheme(),
     new createConfiguration()
 ];
 
