@@ -7,14 +7,17 @@ import GitHubIcon from "@mui/icons-material/GitHub";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import StarIcon from "@mui/icons-material/Star";
 import {
+    alpha,
     Badge,
     Box,
     Button,
+    createTheme,
     Divider,
     Drawer,
     IconButton,
     Paper,
     StyledEngineProvider,
+    ThemeProvider,
     Tooltip,
     Typography
 } from "@mui/material";
@@ -34,6 +37,15 @@ import OpenOptionsButton from "../utils/components/OpenOptionsButton";
 import PanelDrawerItem from "../utils/components/PanelDrawer/PanelDrawerItem";
 import { debugLog, getBridgeEventName, GetExtensionId, isArraysEquals, setStyle } from "../utils/global/common";
 import MessageManager from "../utils/global/MessageManager";
+import {
+    BarStyle,
+    defaultEnvironmentTheme,
+    resolveEnvironmentStyle,
+    STORAGE_EnvironmentTheme,
+    type EnvironmentInfo,
+    type EnvironmentStyle,
+    type TYPE_EnvironmentTheme
+} from "../utils/global/environmentType";
 import SpDevToolsContextProvider, { useSpDevTools } from "../utils/global/spContext";
 import {
     APPLICATION_NAME,
@@ -42,23 +54,54 @@ import {
     STORAGE_ForegroundPanes,
     STORAGE_ListName
 } from "../utils/global/var";
+import { useEnvironment } from "../utils/hooks/use/useEnvironment";
 import { MessageType } from "../utils/types/Message";
 import { defaultToolList, getToolButton } from "./buttonList";
 
 export const MainScreen: React.FunctionComponent = () => {
+    const environment = useEnvironment();
+    const [environmentTheme, setEnvironmentTheme] = useState<TYPE_EnvironmentTheme>(defaultEnvironmentTheme);
+
+    useEffect(() => {
+        MessageManager.sendMessage(MessageType.GETCONFIGURATION, {
+            key: STORAGE_EnvironmentTheme
+        }).then(function (response: TYPE_EnvironmentTheme | null) {
+            if (!response) return;
+            setEnvironmentTheme({ ...defaultEnvironmentTheme, ...response });
+        });
+    }, []);
+
+    const environmentStyle = useMemo(
+        () => resolveEnvironmentStyle(environmentTheme, environment),
+        [environmentTheme, environment]
+    );
+
+    const theme = useMemo(
+        () =>
+            environmentStyle
+                ? createTheme({ palette: { primary: { main: environmentStyle.color } } })
+                : createTheme(),
+        [environmentStyle]
+    );
+
     return (
         // <React.StrictMode>
         <StyledEngineProvider injectFirst>
-            <SnackbarProvider
-                dense
-                maxSnack={5}
-                Components={{
-                    detailsFile: DetailsSnackbar
-                }}>
-                <SpDevToolsContextProvider>
-                    <MainScreenCustomPanel />
-                </SpDevToolsContextProvider>
-            </SnackbarProvider>
+            <ThemeProvider theme={theme}>
+                <SnackbarProvider
+                    dense
+                    maxSnack={5}
+                    Components={{
+                        detailsFile: DetailsSnackbar
+                    }}>
+                    <SpDevToolsContextProvider>
+                        <MainScreenCustomPanel
+                            environment={environment}
+                            environmentStyle={environmentStyle}
+                        />
+                    </SpDevToolsContextProvider>
+                </SnackbarProvider>
+            </ThemeProvider>
         </StyledEngineProvider>
         // </React.StrictMode>
     );
@@ -67,7 +110,24 @@ export const MainScreen: React.FunctionComponent = () => {
 const DRAWER_BUTTON_CONTAINER_WIDTH = 47;
 const MAIN_MENU_WIDTH = 322;
 
-const MainScreenCustomPanel: React.FunctionComponent = () => {
+type MainScreenCustomPanelProps = {
+    environment: EnvironmentInfo | null;
+    environmentStyle: EnvironmentStyle | null;
+};
+
+const MainScreenCustomPanel: React.FunctionComponent<MainScreenCustomPanelProps> = (
+    props: MainScreenCustomPanelProps
+) => {
+    const { environment, environmentStyle } = props;
+
+    // A solid bar paints over the primary colour, so its contents have to switch to the contrast colour.
+    const isSolidBar = environmentStyle?.barStyle === BarStyle.Solid;
+    const barBackground = isSolidBar
+        ? environmentStyle.color
+        : environmentStyle?.barStyle === BarStyle.Tint
+          ? alpha(environmentStyle.color, 0.08)
+          : "background.paper";
+
     const [isMainDrawerOpened, setIsMainDrawerOpened] = useState<boolean>(true);
 
     const [panelOpenedId, setPanelOpenedId] = useState<string | null>(null);
@@ -139,6 +199,16 @@ const MainScreenCustomPanel: React.FunctionComponent = () => {
         setPageStyle();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [panelOpenedId, isForegroundPanes, isMainDrawerOpened]);
+
+    useEffect(() => {
+        const borderWidth = environmentStyle?.borderWidth ?? 0;
+        setStyle(document, "environmenttypeborder", {
+            "#ApplicationShell": [
+                `border: ${borderWidth}px solid ${environmentStyle?.color ?? "transparent"}`,
+                "box-sizing: border-box"
+            ]
+        });
+    }, [environmentStyle]);
 
     useEffect(() => {
         if (panelOpenedId && openedProcesses[panelOpenedId] && !openedProcesses[panelOpenedId].isPanelProcess) {
@@ -261,7 +331,7 @@ const MainScreenCustomPanel: React.FunctionComponent = () => {
                 PaperProps={{
                     sx: {
                         width: DRAWER_BUTTON_CONTAINER_WIDTH,
-                        bgcolor: "background.paper"
+                        bgcolor: barBackground
                         // backgroundColor: "rgb(246,247,248)"
                     }
                 }}
@@ -269,7 +339,19 @@ const MainScreenCustomPanel: React.FunctionComponent = () => {
                 <Stack direction="column" justifyContent="space-between" height="100%" pb={6}>
                     <Stack direction="column">
                         <Tooltip
-                            title={<Typography variant="h6">{APPLICATION_NAME}</Typography>}
+                            title={
+                                <Stack direction="column">
+                                    <Typography variant="h6">{APPLICATION_NAME}</Typography>
+                                    {environment && (
+                                        <>
+                                            <Typography variant="body2">{environment.friendlyName}</Typography>
+                                            <Typography variant="body2">
+                                                {environment.type} - v{environment.version}
+                                            </Typography>
+                                        </>
+                                    )}
+                                </Stack>
+                            }
                             placement="left"
                             disableInteractive>
                             <Button
@@ -279,7 +361,8 @@ const MainScreenCustomPanel: React.FunctionComponent = () => {
                                     minWidth: "unset",
                                     aspectRatio: "1 / 1",
                                     borderRadius: 0,
-                                    boxShadow: "unset"
+                                    boxShadow: "unset",
+                                    color: isSolidBar ? "primary.contrastText" : undefined
                                 }}>
                                 <WandMainIcon sx={{ fontSize: 25 }} />
                             </Button>
@@ -337,10 +420,16 @@ const MainScreenCustomPanel: React.FunctionComponent = () => {
                                                                         aspectRatio: "1 / 1",
                                                                         borderRadius: 0,
                                                                         boxShadow: "unset",
-                                                                        color:
-                                                                            panelOpenedId === process.prefixedId
-                                                                                ? "white"
-                                                                                : "black"
+                                                                        color: isSolidBar
+                                                                            ? "primary.contrastText"
+                                                                            : panelOpenedId === process.prefixedId
+                                                                              ? "white"
+                                                                              : "black",
+                                                                        // contained would fill with the bar colour
+                                                                        ...(isSolidBar &&
+                                                                            panelOpenedId === process.prefixedId && {
+                                                                                bgcolor: "rgba(0, 0, 0, 0.25)"
+                                                                            })
                                                                     }}>
                                                                     {hasBadge ? (
                                                                         <Badge
@@ -370,6 +459,24 @@ const MainScreenCustomPanel: React.FunctionComponent = () => {
                             </Droppable>
                         </DragDropContext>
                     </Stack>
+                    {environmentStyle?.showLabel && (
+                        <Typography
+                            variant="caption"
+                            textAlign="center"
+                            color={environmentStyle.color}
+                            fontWeight="bold"
+                            lineHeight={1}
+                            py={1}
+                            sx={{
+                                writingMode: "vertical-rl",
+                                alignSelf: "center",
+                                userSelect: "none",
+                                cursor: "default"
+                            }}>
+                            {environmentStyle.label}
+                        </Typography>
+                    )}
+
                     <Typography
                         sx={{
                             writingMode: "vertical-rl",
