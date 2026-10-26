@@ -21,6 +21,7 @@ export const MESSAGE_SOURCE_WebPage = `${PROJECT_PREFIX}-webPage`;
 export const MESSAGE_SOURCE_Content = `${PROJECT_PREFIX}-content`;
 
 export const STORAGE_WebEditorFavFiles = "webEditorFavFiles";
+export const STORAGE_NavigationFavorites = "navigationFavorites";
 
 export const STORAGE_CloneIgnoredFields = "cloneIgnoredFields";
 
