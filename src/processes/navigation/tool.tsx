@@ -1,7 +1,9 @@
+import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { forwardRef, useMemo } from "react";
 
+import ComponentContainer from "../../utils/components/ComponentContainer";
 import { ProcessButton, type ProcessProps, type ProcessRef } from "../../utils/global/.processClass";
 import AdvancedFind from "./containers/NavigationToAdvancedFind";
 import NavigationAzurePortal from "./containers/NavigationToAzurePortal";
@@ -11,6 +13,7 @@ import NavigationToPowerApps from "./containers/NavigationToPowerApps";
 import NavigationToPowerAutomate from "./containers/NavigationToPowerAutomate";
 import NavigationToSecurity from "./containers/NavigationToSecurity";
 import NavigationToSolutionList from "./containers/NavigationToSolutionList";
+import NavigationQuickLinks from "./containers/NavigationQuickLinks";
 
 class NavigationProcess extends ProcessButton {
     static id = "navigation";
@@ -44,9 +47,9 @@ const theme = createTheme({
     }
 });
 
-const buttons = [
-    NavigationToSolutionList,
-    NavigationToFormEditor,
+const buttons = [NavigationToSolutionList, NavigationToFormEditor];
+
+const portals = [
     AdvancedFind,
     NavigationToPowerApps,
     NavigationToPowerAutomate,
@@ -64,10 +67,18 @@ const Navigation = forwardRef<ProcessRef, ProcessProps>(function NavigationProce
 
     return (
         <ThemeProvider theme={theme}>
-            <Stack spacing={2} height="calc(100% - 10px)" padding="10px" alignItems="center">
+            <Stack spacing={2} height="calc(100% - 10px)" padding="10px" alignItems="center" sx={{ boxSizing: "border-box", overflowY: "auto", "& > *": { flexShrink: 0 } }}>
                 {buttons.map((Button) => {
                     return <Button environmentId={environmentId} clientUrl={clientUrl} />;
                 })}
+                <ComponentContainer width="100%" Legends={{ top: { position: "center", component: "Portals", padding: "5px" } }}>
+                    <Box display="flex" flexWrap="wrap" gap={1} justifyContent="center" padding="5px">
+                        {portals.map((Button) => (
+                            <Button environmentId={environmentId} clientUrl={clientUrl} />
+                        ))}
+                    </Box>
+                </ComponentContainer>
+                <NavigationQuickLinks environmentId={environmentId} clientUrl={clientUrl} />
             </Stack>
         </ThemeProvider>
     );

@@ -17,6 +17,7 @@ import { useBoolean } from 'usehooks-ts';
 import FilterInput, { type AttributeFilterInputRef } from '../../../utils/components/FilterInput';
 import type { SolutionItem } from '../../../utils/types/SolutionItem';
 import type { NavigationButton } from '../../../utils/types/NavigationButton';
+import { tileSx } from '../components/NavigationButton';
 import D365NavBarIcon from '../../../utils/components/D365NavBarIcon';
 import RedDisabledButton from '../../../utils/components/RedDisabledButton';
 import MuiVirtuoso from '../../../utils/components/MuiVirtuoso';
@@ -109,7 +110,7 @@ function SolutionList(props: NavigationButton) {
                 top: { position: 'center', component: 'Solutions', padding: '5px' },
                 bottom: { position: 'center', component: selectSolutionButton, padding: '10px' }
             }}>
-                <Stack spacing={2} padding='5px' direction='row' justifyContent='center'>
+                <Stack spacing={1} padding='5px' direction='row' justifyContent='center'>
 
                     <Tooltip placement='top' title={<>Open <b><i>{solutionName}</i></b> in old interface</>} disableInteractive arrow>
                         <Box>
@@ -117,15 +118,10 @@ function SolutionList(props: NavigationButton) {
                                 variant='outlined'
                                 onClick={handleClickOldSolution}
                                 startIcon={<D365NavBarIcon iconX={-239} iconY={-1} width={20} />}
-                                buttonSx={{
-                                    gap: '0.4em',
-                                    p: 0.5,
-                                    fontSize: '0.8em',
-                                    justifyContent: 'flex-start',
-                                    overflow: 'hidden',
-                                    whiteSpace: 'nowrap',
-                                }}
-                            />
+                                buttonSx={tileSx}
+                            >
+                                Classic
+                            </RedDisabledButton>
                         </Box>
                     </Tooltip>
 
@@ -136,15 +132,10 @@ function SolutionList(props: NavigationButton) {
                                 disabled={!environmentId}
                                 onClick={handleClickPowerApps}
                                 startIcon={<PowerAppsIcon />}
-                                buttonSx={{
-                                    gap: '0.4em',
-                                    p: 0.5,
-                                    fontSize: '0.8em',
-                                    justifyContent: 'flex-start',
-                                    overflow: 'hidden',
-                                    whiteSpace: 'nowrap',
-                                }}
-                            />
+                                buttonSx={tileSx}
+                            >
+                                Power Apps
+                            </RedDisabledButton>
                         </Box>
                     </Tooltip>
 
@@ -155,15 +146,10 @@ function SolutionList(props: NavigationButton) {
                                 disabled={!environmentId}
                                 onClick={handleClickPowerAutomate}
                                 startIcon={<PowerAutomateIcon />}
-                                buttonSx={{
-                                    gap: '0.4em',
-                                    p: 0.5,
-                                    fontSize: '0.8em',
-                                    justifyContent: 'flex-start',
-                                    overflow: 'hidden',
-                                    whiteSpace: 'nowrap',
-                                }}
-                            />
+                                buttonSx={tileSx}
+                            >
+                                Power Automate
+                            </RedDisabledButton>
                         </Box>
                     </Tooltip>
 
