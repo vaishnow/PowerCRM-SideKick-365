@@ -2,6 +2,7 @@ import { ToolPanelButton } from "~utils/global/.toolPanelButton";
 
 import { type StorageConfiguration } from "../utils/types/StorageConfiguration";
 import allFields from "./allFields/button";
+import auditHistory from "./auditHistory/button";
 import commandDebugger from "./commandDebugger/button";
 import dirtyFields from "./dirtyFields/button";
 import entitiesList from "./entitiesList/button";
@@ -29,6 +30,7 @@ export const ToolPanelButtonList: ToolPanelButton[] = [
     new optionSetTable(),
     new dirtyFields(),
     new relatedRecords(),
+    new auditHistory(),
     new entitiesList(),
     new impersonation(),
     new userSecurity(),
