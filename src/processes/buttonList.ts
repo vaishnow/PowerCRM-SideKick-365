@@ -6,6 +6,7 @@ import auditHistory from "./auditHistory/button";
 import commandDebugger from "./commandDebugger/button";
 import dirtyFields from "./dirtyFields/button";
 import entitiesList from "./entitiesList/button";
+import fetchXmlBuilder from "./fetchXmlBuilder/button";
 import environmentTheme from "./environmentTheme/button";
 import formFlags from "./formFlags/button";
 import formToolsV2 from "./formToolsv2/button";
@@ -43,6 +44,7 @@ export const ToolPanelButtonList: ToolPanelButton[] = [
     new commandDebugger(),
     new formFlags(),
     new workflowExplorer(),
+    new fetchXmlBuilder(),
     new environmentTheme(),
     new createConfiguration()
 ];
