@@ -252,6 +252,11 @@ export function getRecordUrl(entityName: string, recordId: string) {
     return `${window.location.origin}${window.location.pathname}?pagetype=entityrecord&etn=${entityName}&id=${recordId}`;
 }
 
+export function getWebApiBaseUrl() {
+    const [major, minor] = Xrm.Utility.getGlobalContext().getVersion().split(".");
+    return `${Xrm.Utility.getGlobalContext().getClientUrl()}/api/data/v${major}.${minor}/`;
+}
+
 export function getBapEnvironmentId(): string | undefined {
     return (Xrm.Utility.getGlobalContext().organizationSettings as any)?.bapEnvironmentId;
 }
