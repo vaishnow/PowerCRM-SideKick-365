@@ -124,13 +124,21 @@ const spanByEvent = (value: any, row: AuditRow) => row.auditid;
 const spanNever = (value: any, row: AuditRow) => row.id;
 
 /** Row tints telling the sources apart, in the order they were added. */
-const SOURCE_TINTS = ["#1976d2", "#2e7d32", "#ed6c02", "#9c27b0", "#0288d1", "#d32f2f"];
+// Six hues kept far apart on the wheel, so neighbouring sources never read as the same colour.
+const SOURCE_TINTS = ["#d32f2f", "#ed6c02", "#2e7d32", "#0097a7", "#1976d2", "#9c27b0"];
 
-/** One row class per tint, set by getRowClassName. */
+/**
+ * One row class per tint, set by getRowClassName. The solid left stripe does the identifying -
+ * a wash alone has to stay too faint to keep the text readable to be noticed at a glance.
+ */
 const SOURCE_ROWS_SX: Record<string, object> = Object.fromEntries(
     SOURCE_TINTS.map((tint, index) => [
         `& .audit-source-${index}`,
-        { bgcolor: alpha(tint, 0.08), "&:hover": { bgcolor: alpha(tint, 0.16) } }
+        {
+            boxShadow: `inset 4px 0 0 ${tint}`,
+            bgcolor: alpha(tint, 0.13),
+            "&:hover": { bgcolor: alpha(tint, 0.24) }
+        }
     ])
 );
 
@@ -458,7 +466,11 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                                             isAdded ? "" : " (selected, not added yet)"
                                         }`}
                                         variant={isAdded ? "filled" : "outlined"}
-                                        sx={{ bgcolor: alpha(SOURCE_TINTS[index % SOURCE_TINTS.length], 0.16) }}
+                                        sx={{
+                                            bgcolor: alpha(SOURCE_TINTS[index % SOURCE_TINTS.length], 0.24),
+                                            boxShadow: `inset 4px 0 0 ${SOURCE_TINTS[index % SOURCE_TINTS.length]}`,
+                                            pl: 0.5
+                                        }}
                                         deleteIcon={<CancelIcon style={{ cursor: "pointer" }} />}
                                         onDelete={
                                             isAdded
