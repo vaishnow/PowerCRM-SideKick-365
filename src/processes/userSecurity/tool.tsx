@@ -1,9 +1,7 @@
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
-import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
@@ -11,7 +9,6 @@ import Stack from "@mui/material/Stack";
 import Tab, { tabClasses } from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import TextField from "@mui/material/TextField";
-import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { DataGrid, type GridColDef, gridClasses } from "@mui/x-data-grid";
 import { SnackbarProvider } from "notistack";
@@ -23,10 +20,11 @@ import AvatarColor from "../../utils/components/AvatarColor";
 import DetailsSnackbar from "../../utils/components/DetailsSnackbar";
 import FilterInput from "../../utils/components/FilterInput";
 import { CustomLoadingOverlay, CustomNoRowsOverlay } from "../../utils/components/MetadataBrowser/StyledDataGrid";
+import OpenRecordButton from "../../utils/components/OpenRecordButton";
 import TooltipInfo from "../../utils/components/TooltipInfo";
 import TypographyCopy from "../../utils/components/TypographyCopy";
 import { ProcessButton, type ProcessProps, type ProcessRef } from "../../utils/global/.processClass";
-import { formatId, getBapEnvironmentId, getRecordUrl } from "../../utils/global/common";
+import { formatId, getBapEnvironmentId } from "../../utils/global/common";
 import UserSettings from "./UserSettings";
 import { RetrieveRecordsByPrimaryAttributeOrGuid } from "../../utils/hooks/XrmApi/RetrieveRecordsByPrimaryAttributeOrGuid";
 import { PRIVILEGE_DEPTH_ORDER, RetrieveUserPrivileges } from "../../utils/hooks/XrmApi/RetrieveUserPrivileges";
@@ -151,14 +149,9 @@ const UserSecurity = forwardRef<ProcessRef, ProcessProps>(function UserSecurity(
                         {userSecurity?.user?.emailAddress}
                     </Typography>
                 </Stack>
-                <Tooltip title="Open user record" arrow>
-                    <IconButton
-                        size="small"
-                        sx={{ ml: "auto" }}
-                        onClick={() => window.open(getRecordUrl("systemuser", selectedUserId), "_blank")}>
-                        <OpenInNewIcon fontSize="small" />
-                    </IconButton>
-                </Tooltip>
+                <Box ml="auto">
+                    <OpenRecordButton entityName="systemuser" recordId={selectedUserId} tooltip="Open user record" />
+                </Box>
             </Stack>
 
             <Stack spacing={0.25} pt={0.5}>
@@ -193,7 +186,7 @@ const UserSecurity = forwardRef<ProcessRef, ProcessProps>(function UserSecurity(
 
             {activeTab === 0 && (
                 <Box flexGrow={1} minHeight={0} sx={{ overflowY: "auto" }}>
-                    {userSecurity && <RolesDisplayList user={userSecurity.user} />}
+                    {userSecurity && <RolesDisplayList user={userSecurity.user} interactive />}
                     <List
                         dense
                         subheader={
@@ -203,7 +196,16 @@ const UserSecurity = forwardRef<ProcessRef, ProcessProps>(function UserSecurity(
                         }
                         sx={{ fontSize: "1.15em" }}>
                         {userSecurity?.teams.map((team) => (
-                            <ListItem key={team.teamid} sx={{ display: "list-item", pt: 0, pb: 0 }}>
+                            <ListItem
+                                key={team.teamid}
+                                sx={{ display: "list-item", pt: 0, pb: 0 }}
+                                secondaryAction={
+                                    <OpenRecordButton
+                                        entityName="team"
+                                        recordId={team.teamid}
+                                        tooltip="Open team"
+                                    />
+                                }>
                                 <ListItemText primary={team.name} />
                             </ListItem>
                         ))}

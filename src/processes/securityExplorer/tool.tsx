@@ -1,9 +1,7 @@
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
 import Divider from "@mui/material/Divider";
-import IconButton from "@mui/material/IconButton";
 import Link from "@mui/material/Link";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
@@ -19,8 +17,8 @@ import { useDebounceValue } from "usehooks-ts";
 
 import AvatarColor from "../../utils/components/AvatarColor";
 import MuiVirtuoso from "../../utils/components/MuiVirtuoso";
+import OpenRecordButton from "../../utils/components/OpenRecordButton";
 import { ProcessButton, type ProcessProps, type ProcessRef } from "../../utils/global/.processClass";
-import { getRecordUrl } from "../../utils/global/common";
 import { RetrieveRecordsByPrimaryAttributeOrGuid } from "../../utils/hooks/XrmApi/RetrieveRecordsByPrimaryAttributeOrGuid";
 import { RetrieveSecurityRole } from "../../utils/hooks/XrmApi/RetrieveSecurityRole";
 import {
@@ -203,13 +201,7 @@ function NodeItem(props: { node: SecurityNode; onDrill: (node: SecurityNode) => 
     return (
         <ListItem
             disablePadding
-            secondaryAction={
-                <IconButton
-                    size="small"
-                    onClick={() => window.open(getRecordUrl(ENTITY_OF_KIND[node.kind], node.id), "_blank")}>
-                    <OpenInNewIcon fontSize="small" />
-                </IconButton>
-            }>
+            secondaryAction={<OpenRecordButton entityName={ENTITY_OF_KIND[node.kind]} recordId={node.id} />}>
             <ListItemButton dense onClick={() => onDrill(node)} sx={{ height: 35 }}>
                 {node.kind === "user" && (
                     <AvatarColor fullname={node.name} size={24} sx={() => ({ mr: 1 })} />

@@ -3,14 +3,17 @@ import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
 import React from "react";
+import OpenRecordButton from "~utils/components/OpenRecordButton";
 import type { ActiveUser } from "~utils/types/ActiveUser";
 import type { TeamsSecurityRole } from "~utils/types/SecurityRole";
 
 interface RolesDisplayListProps {
     user: ActiveUser;
+    /** Three of the four mount points are tooltips or snackbars, where a click target is unreachable. */
+    interactive?: boolean;
 }
 const RolesDisplayList = React.memo((props: RolesDisplayListProps) => {
-    const { user } = props;
+    const { user, interactive } = props;
 
     return (
         <List
@@ -22,7 +25,12 @@ const RolesDisplayList = React.memo((props: RolesDisplayListProps) => {
             }
             sx={{ fontSize: "1.15em" }}>
             {user.securityRoles.map((s) => (
-                <ListItem sx={{ display: "list-item", pt: 0, pb: 0 }}>
+                <ListItem
+                    key={s.roleid}
+                    sx={{ display: "list-item", pt: 0, pb: 0 }}
+                    secondaryAction={
+                        interactive && <OpenRecordButton entityName="role" recordId={s.roleid} tooltip="Open role" />
+                    }>
                     <ListItemText primary={s.name} />
                 </ListItem>
             ))}
@@ -48,7 +56,25 @@ const RolesDisplayList = React.memo((props: RolesDisplayListProps) => {
                     return (
                         <>
                             {roles.map((r) => (
-                                <ListItem sx={{ display: "list-item", pt: 0, pb: 0 }}>
+                                <ListItem
+                                    key={`${r.teamid}_${r.roleid}`}
+                                    sx={{ display: "list-item", pt: 0, pb: 0 }}
+                                    secondaryAction={
+                                        interactive && (
+                                            <>
+                                                <OpenRecordButton
+                                                    entityName="role"
+                                                    recordId={r.roleid}
+                                                    tooltip="Open role"
+                                                />
+                                                <OpenRecordButton
+                                                    entityName="team"
+                                                    recordId={r.teamid}
+                                                    tooltip={`Open team ${r.teamname}`}
+                                                />
+                                            </>
+                                        )
+                                    }>
                                     <ListItemText
                                         primary={
                                             <>

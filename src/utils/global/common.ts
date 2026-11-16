@@ -255,3 +255,35 @@ export function getRecordUrl(entityName: string, recordId: string) {
 export function getBapEnvironmentId(): string | undefined {
     return (Xrm.Utility.getGlobalContext().organizationSettings as any)?.bapEnvironmentId;
 }
+
+const ADMIN_CENTER_ROOT = "https://admin.powerplatform.microsoft.com";
+
+// The admin centre has no per-record deep link for these, so its entry is always a list page.
+const SECURITY_ADMIN_PATH: { [entityName: string]: string } = {
+    role: "security-roles",
+    team: "teams",
+    systemuser: "users"
+};
+
+const SECURITY_LEGACY_PATH: { [entityName: string]: string } = {
+    role: "biz/roles/edit.aspx",
+    team: "biz/teams/edit.aspx",
+    systemuser: "biz/users/edit.aspx"
+};
+
+export function getRecordUrls(entityName: string, recordId: string) {
+    const clientUrl = Xrm.Utility.getGlobalContext().getClientUrl();
+    const environmentId = getBapEnvironmentId();
+    const adminEnvironment = environmentId ? `${ADMIN_CENTER_ROOT}/manage/environments/${environmentId}` : ADMIN_CENTER_ROOT;
+
+    const legacyPath = SECURITY_LEGACY_PATH[entityName];
+    const adminPath = SECURITY_ADMIN_PATH[entityName];
+
+    return {
+        uci: getRecordUrl(entityName, recordId),
+        legacy: legacyPath
+            ? `${clientUrl}/${legacyPath}?id=${formatId(recordId)}`
+            : `${clientUrl}/tools/AdminSecurity/adminsecurity_area.aspx`,
+        admin: adminPath ? `${adminEnvironment}/settings/users-permissions/${adminPath}` : adminEnvironment
+    };
+}
