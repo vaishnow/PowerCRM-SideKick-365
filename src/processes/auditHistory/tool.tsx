@@ -262,8 +262,10 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
 
     const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
     const [showDisplayNames, setShowDisplayNames] = useState<boolean>(false);
+    const [appTimeZone, setAppTimeZone] = useState<boolean>(true);
 
     const dateTimeFormat = useMemo(() => getCurrentDynamics365DateTimeFormat(), []);
+    const appOffset = useMemo(() => Xrm.Utility.getGlobalContext().userSettings.getTimeZoneOffsetMinutes(), []);
 
     const displayNames = RetrieveEntitiesAttributesDisplayName(
         showDisplayNames
@@ -300,8 +302,18 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                     return {
                         ...column,
                         width: dateTimeFormat.is12hours ? 170 : 150,
+                        // dayjs renders a Date in the browser zone, so landing on the D365 wall
+                        // clock means moving the instant by both offsets.
+                        // shortcut: getTimeZoneOffsetMinutes is the offset now, so rows from before
+                        // a daylight-saving change render an hour off. Upgrade to the createdon
+                        // FormattedValue if that starts to matter.
                         valueFormatter: (value: Date) =>
-                            value && dayjs(value).format(dateTimeFormat.ShortDateTimeSecondsPattern)
+                            value &&
+                            dayjs(
+                                appTimeZone
+                                    ? new Date(value.getTime() + (appOffset + value.getTimezoneOffset()) * 60000)
+                                    : value
+                            ).format(dateTimeFormat.ShortDateTimeSecondsPattern)
                     };
                 }
                 if (column.field === "attribute") {
@@ -309,7 +321,7 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                 }
                 return column;
             }),
-        [dateTimeFormat, attributeLabel]
+        [dateTimeFormat, attributeLabel, appTimeZone, appOffset]
     );
 
     const sourceIndexes = useMemo(
@@ -433,6 +445,18 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                             </ToggleButton>
                             <ToggleButton value={true} title="Display names">
                                 Display
+                            </ToggleButton>
+                        </ToggleButtonGroup>
+                        <ToggleButtonGroup
+                            exclusive
+                            size="small"
+                            value={appTimeZone}
+                            onChange={(event, value) => value !== null && setAppTimeZone(value)}>
+                            <ToggleButton value={true} title="Times in the Dynamics 365 user time zone, as the app shows them">
+                                App
+                            </ToggleButton>
+                            <ToggleButton value={false} title="Times in this machine's time zone">
+                                Local
                             </ToggleButton>
                         </ToggleButtonGroup>
                         <ButtonLinearProgress
