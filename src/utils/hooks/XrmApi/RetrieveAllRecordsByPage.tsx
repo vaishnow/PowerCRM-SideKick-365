@@ -10,7 +10,7 @@ const filterString = (filter: string | undefined) => (filter && filter !== '' ? 
 const orderbyString = (orderby: string | undefined) => (orderby && orderby !== '' ? "&$orderby=" + orderby : "")
 const guidregex = /^[{]?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}[}]?$/
 
-export function RetrieveAllRecordsByPage(entityname: string, select: string[], page: number, pageSize: number = 100, filter?: string, orderBy?: GridSortModel): [any[], boolean] {
+export function RetrieveAllRecordsByPage(entityname: string, select: string[], page: number, pageSize: number = 100, filter?: string, orderBy?: GridSortModel, extraFilter?: string): [any[], boolean] {
 
     const [data, setData] = useState<any[]>([])
     const [isFetching, setFetching] = useState<boolean>(false)
@@ -30,6 +30,9 @@ export function RetrieveAllRecordsByPage(entityname: string, select: string[], p
             return "contains(" + primaryNameLogicalName + ",'" + encodeURIComponent(filter).replace(/'/g, "''") + "')"
     }, [primaryNameLogicalName, filter, idAttribute])
     
+    // `filter` is search text turned into contains(primaryname,...); this one is raw OData.
+    const _extraFilter = extraFilter
+
     const _orderBy = useMemo(() => {
         return orderBy?.map(item => {
             return item.field + " " + item.sort
@@ -43,9 +46,11 @@ export function RetrieveAllRecordsByPage(entityname: string, select: string[], p
         async function fetchData() {
             debugLog("RetrieveAllRecordsByPage");
 
+            const combinedFilter = [_filter, _extraFilter].filter(Boolean).map(f => `(${f})`).join(" and ")
+
             const options: string =
                 "?$select=" + _select +
-                (_filter ? filterString(_filter) : '') +
+                (combinedFilter ? filterString(combinedFilter) : '') +
                 orderbyString(_orderBy) +
                 skiptokenString(_page + 1)
 
@@ -58,7 +63,7 @@ export function RetrieveAllRecordsByPage(entityname: string, select: string[], p
         setFetching(true)
         fetchData();
 
-    }, [_select, _page, _pageSize, _filter, _orderBy, _entityname]);
+    }, [_select, _page, _pageSize, _filter, _extraFilter, _orderBy, _entityname]);
 
     useEffect(() => {
         setData([])

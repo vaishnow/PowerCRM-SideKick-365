@@ -10,6 +10,9 @@ import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import IconButton from "@mui/material/IconButton";
 import Link from "@mui/material/Link";
+import Checkbox from "@mui/material/Checkbox";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
 import ToggleButton from "@mui/material/ToggleButton";
@@ -31,6 +34,9 @@ import { ProcessButton, type ProcessProps, type ProcessRef } from "../../utils/g
 import { getCurrentDynamics365DateTimeFormat, getRecordUrl } from "../../utils/global/common";
 import { PROJECT_PREFIX } from "../../utils/global/var";
 import { useCurrentRecord } from "../../utils/hooks/use/useCurrentRecord";
+import { RetrieveRecordLookups } from "../../utils/hooks/XrmApi/RetrieveRecordLookups";
+import { RetrieveRelationShipOneToMany } from "../../utils/hooks/XrmApi/RetrieveRelationShipOneToMany";
+import { RetrieveSetName } from "../../utils/hooks/XrmApi/RetrieveSetName";
 import { type AuditRow, type AuditSource } from "../../utils/types/AuditHistory";
 import {
     AUDIT_PAGE_SIZE_DEFAULT,
@@ -227,6 +233,24 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
     // Records added to view together. The one in the search bar is viewed with them until added
     // itself, so the single record flow stays as it was.
     const [addedSources, setAddedSources] = useState<AuditSource[]>([]);
+
+    // Shortcuts off the record open in the form, not the staged search selection.
+    const currentSetName = RetrieveSetName(currentEntityName ?? "");
+    const [recordLookups, isFetchingLookups] = RetrieveRecordLookups(currentSetName, currentRecordId);
+    const [relatedAnchor, setRelatedAnchor] = useState<null | HTMLElement>(null);
+
+    const [oneToMany] = RetrieveRelationShipOneToMany(currentEntityName ?? "");
+    const [relatedOnly, setRelatedOnly] = useState<boolean>(true);
+    // Lookups on the searched entity that point back at the current record. Several can exist,
+    // e.g. a primary and a secondary contact on the same table.
+    const relatedFilter = useMemo(() => {
+        if (!entityName || !currentRecordId) return undefined;
+        const attributes = oneToMany
+            .filter((relationship) => relationship.ReferencingEntity === entityName)
+            .map((relationship) => relationship.ReferencingAttribute);
+        if (!attributes.length) return undefined;
+        return attributes.map((attribute) => `_${attribute}_value eq ${currentRecordId}`).join(" or ");
+    }, [oneToMany, entityName, currentRecordId]);
     const isSelectedAdded = addedSources.some((added) => sourceKey(added) === `${entityName}|${recordId}`);
     const sources = useMemo(
         () => (entityName && recordId && !isSelectedAdded ? [...addedSources, { entityName, recordId }] : addedSources),
@@ -370,6 +394,7 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                             recordIds={recordIds}
                             setRecordIds={setRecordIds}
                             reset={reset}
+                            extraFilter={relatedOnly ? relatedFilter : undefined}
                         />
                         <Button
                             variant="outlined"
@@ -378,6 +403,41 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                             onClick={() => setAddedSources((previous) => [...previous, { entityName, recordId }])}>
                             Add
                         </Button>
+                        <Button
+                            variant="outlined"
+                            title="Add a record this one links to"
+                            disabled={isFetchingLookups || !recordLookups.length}
+                            onClick={(event) => setRelatedAnchor(event.currentTarget)}>
+                            Related
+                        </Button>
+                        <Menu
+                            anchorEl={relatedAnchor}
+                            open={!!relatedAnchor}
+                            onClose={() => setRelatedAnchor(null)}>
+                            {recordLookups.map((lookup) => {
+                                const added = sources.some(
+                                    (source) => sourceKey(source) === `${lookup.entityName}|${lookup.recordId}`
+                                );
+                                return (
+                                    <MenuItem
+                                        key={lookup.attribute}
+                                        disabled={added}
+                                        title={`${lookup.entityName} ${lookup.recordId}`}
+                                        onClick={() => {
+                                            setAddedSources((previous) => [
+                                                ...previous,
+                                                { entityName: lookup.entityName, recordId: lookup.recordId }
+                                            ]);
+                                            setRelatedAnchor(null);
+                                        }}>
+                                        <Typography variant="body2" sx={{ opacity: 0.75, mr: 1 }}>
+                                            {lookup.attribute}
+                                        </Typography>
+                                        <Typography variant="body2">{lookup.name}</Typography>
+                                    </MenuItem>
+                                );
+                            })}
+                        </Menu>
                         <IconButton
                             size="small"
                             title={isFullScreen ? "Exit full screen" : "Full screen"}
@@ -435,6 +495,20 @@ const AuditHistory = forwardRef<ProcessRef, ProcessProps>(function AuditHistory(
                                 <TextField {...params} placeholder={fields.length ? "" : "All fields"} />
                             )}
                         />
+                        {relatedFilter && (
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        size="small"
+                                        checked={relatedOnly}
+                                        onChange={(event) => setRelatedOnly(event.target.checked)}
+                                    />
+                                }
+                                label={<Typography variant="caption">Related only</Typography>}
+                                title="List only records linking to the record open in the form"
+                                sx={{ whiteSpace: "nowrap", mr: 0 }}
+                            />
+                        )}
                         <ToggleButtonGroup
                             exclusive
                             size="small"

@@ -13,15 +13,17 @@ type RecordSearchBarProps = {
     recordIds: string[],
     theme?: Theme,
     multiple?: boolean,
+    /** Raw OData ANDed with the search, to narrow the record list. */
+    extraFilter?: string,
 }
 const RecordSearchBar: React.FunctionComponent<RecordSearchBarProps> = (props) => {
 
-    const { entityName, multiple, recordIds, setEntityName, setRecordIds, theme, reset } = props;
+    const { entityName, multiple, recordIds, setEntityName, setRecordIds, theme, reset, extraFilter } = props;
 
     return (
         <Stack direction={"row"} spacing={0.5} width="100%">
             <EntitySelector fullWidth setEntityname={setEntityName} entityname={entityName} />
-            <RecordSelector setRecordsIds={setRecordIds} entityname={entityName} recordsIds={recordIds} multiple={props.multiple} theme={theme} />
+            <RecordSelector setRecordsIds={setRecordIds} entityname={entityName} recordsIds={recordIds} multiple={props.multiple} theme={theme} extraFilter={extraFilter} />
             <Button
                 onClick={reset}
                 sx={{

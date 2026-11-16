@@ -27,10 +27,12 @@ type RecordSelectorProps = {
     recordsIds: string[],
     disabled?: boolean,
     multiple?: boolean,
-    theme?: Theme
+    theme?: Theme,
+    /** Raw OData ANDed with the search, to narrow the dialog's list. */
+    extraFilter?: string
 }
 const RecordSelector: React.FunctionComponent<RecordSelectorProps> = (props) => {
-    const { setRecordsIds, entityname, recordsIds, disabled, multiple } = props;
+    const { setRecordsIds, entityname, recordsIds, disabled, multiple, extraFilter } = props;
 
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [recordsDisplayNames, fetchingDisplayName] = RetrieveRecordsDisplayNames(entityname, recordsIds)
@@ -130,6 +132,7 @@ const RecordSelector: React.FunctionComponent<RecordSelectorProps> = (props) => 
                         setRecordsIds={setRecordsIds}
                         multiple={multiple}
                         setIsLoading={setGridIsLoading}
+                        extraFilter={extraFilter}
                     />
                 }
             </>
@@ -147,10 +150,11 @@ type RecordSelectorDialogProps = {
     records: RecordsDisplayNamesResponse[],
     setRecordsIds: Dispatch<SetStateAction<string[]>>,
     multiple?: boolean,
-    setIsLoading: Dispatch<SetStateAction<boolean>>
+    setIsLoading: Dispatch<SetStateAction<boolean>>,
+    extraFilter?: string
 }
 const RecordSelectorDialog: React.FunctionComponent<RecordSelectorDialogProps> = (props) => {
-    const { closeDialog, open, entityname, records, recordsIds, setRecordsIds: registerRecordIds, multiple, setIsLoading } = props;
+    const { closeDialog, open, entityname, records, recordsIds, setRecordsIds: registerRecordIds, multiple, setIsLoading, extraFilter } = props;
 
     const [entityMetadata, fetchingMetadata] = RetrieveAttributesMetaData(entityname)
     const [filterInput, setFilterInput] = useState<string>("")
@@ -178,7 +182,9 @@ const RecordSelectorDialog: React.FunctionComponent<RecordSelectorDialogProps> =
         paginationModel.page,
         paginationModel.pageSize,
         filterInput,
-        sortModel
+        sortModel,
+        // shortcut: only narrows the server-side list, the FetchXML filter button ignores it.
+        extraFilter
     );
     const [fetchXmlRecords, isFetchingFetchXML] = RetrieveRecordsByFetchXML(entityname, filterXml ?? '')
 
