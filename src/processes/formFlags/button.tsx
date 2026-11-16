@@ -15,8 +15,9 @@ class FormFlagsButton extends ToolPanelButton {
                 <Typography>
                     Disable components to isolate what breaks a form: <b>command bar</b>, <b>form handlers</b>,{" "}
                     <b>form libraries</b>, <b>web resource controls</b>, a single <b>form control</b> and{" "}
-                    <b>business process flows</b>. Handlers and libraries accept an <u>index or a range</u>, whose
-                    values come from the <b>FormEvents</b> operation in Monitor.
+                    <b>business process flows</b>. Handlers and libraries accept an <u>index or a range</u>, and the
+                    panel lists which components that index resolves to whenever it can read them, falling back to
+                    the <b>FormEvents</b> operation in Monitor when it cannot.
                 </Typography>
                 <Typography>
                     Strip the app chrome (<b>navigation bar</b>, <b>command bar</b>, <b>sitemap</b>), turn on{" "}

@@ -7,6 +7,7 @@ import { useMemo } from 'react';
 import ComponentContainer from '../../../utils/components/ComponentContainer';
 import { PowerAppsIcon } from '../icons';
 import type { NavigationButton } from '../../../utils/types/NavigationButton';
+import { tileSx } from '../components/NavigationButton';
 import { RetrieveFirstRecordInterval } from '../../../utils/hooks/XrmApi/RetrieveFirstRecordInterval';
 import RedDisabledButton from '../../../utils/components/RedDisabledButton';
 import D365RibbonHomePageIcon from '../../../utils/components/D365RibbonHomePageIcon';
@@ -59,7 +60,7 @@ function FormEditor(props: NavigationButton) {
                 margin: '10px'
             }
         }}>
-            <Stack spacing={2} padding='5px' direction='row' justifyContent='center'>
+            <Stack spacing={1} padding='5px' direction='row' justifyContent='center'>
 
                 <Tooltip placement='top' title={`Edit ${currentFormName} form in old interface`} disableInteractive arrow>
                     <Box>
@@ -68,15 +69,10 @@ function FormEditor(props: NavigationButton) {
                             variant='outlined'
                             onClick={handleClickOldSolution}
                             startIcon={<D365RibbonHomePageIcon iconX={-477} iconY={-521} width={20} />}
-                            buttonSx={{
-                                gap: '0.4em',
-                                p: 0.5,
-                                fontSize: '0.8em',
-                                justifyContent: 'flex-start',
-                                overflow: 'hidden',
-                                whiteSpace: 'nowrap',
-                            }}
-                        />
+                            buttonSx={tileSx}
+                        >
+                            Classic
+                        </RedDisabledButton>
                     </Box>
                 </Tooltip>
 
@@ -87,15 +83,10 @@ function FormEditor(props: NavigationButton) {
                             variant='outlined'
                             onClick={handleClickPowerApps}
                             startIcon={<PowerAppsIcon />}
-                            buttonSx={{
-                                gap: '0.4em',
-                                p: 0.5,
-                                fontSize: '0.8em',
-                                justifyContent: 'flex-start',
-                                overflow: 'hidden',
-                                whiteSpace: 'nowrap',
-                            }}
-                        />
+                            buttonSx={tileSx}
+                        >
+                            Power Apps
+                        </RedDisabledButton>
                     </Box>
                 </Tooltip>
             </Stack>

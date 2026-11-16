@@ -57,6 +57,7 @@ export function RetrieveAttributesMetaData(entityname: string): [AttributeMetada
                         Precision: attribute.Precision,
                         MaxLength: attribute.MaxLength,
                         Target: attribute.Targets?.at(0),
+                        Targets: attribute.Targets ?? [],
                         Format: attribute.Format
                     }
                 };

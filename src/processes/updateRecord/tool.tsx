@@ -20,6 +20,7 @@ import Typography from "@mui/material/Typography";
 import ThemeProvider from "@mui/styles/ThemeProvider";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { ConfirmProvider, useConfirm } from "material-ui-confirm";
 import { SnackbarProvider, useSnackbar } from "notistack";
 import React, {
     forwardRef,
@@ -35,6 +36,7 @@ import { useBoolean } from "usehooks-ts";
 import DropDownButton from "../../utils/components/DropDownButton";
 import { NoMaxWidthTooltip } from "../../utils/components/NoMaxWidthTooltip";
 import RecordSearchBar from "../../utils/components/RecordSearchBar";
+import RequestSettingsBar from "../../utils/components/RequestSettingsBar";
 import SplitDropDownButtonGroup from "../../utils/components/SplitDropDownButtonGroup";
 import { ProcessButton, type ProcessProps, type ProcessRef } from "../../utils/global/.processClass";
 import { debugLog, formatId, type StringKeys } from "../../utils/global/common";
@@ -44,6 +46,7 @@ import { useFormContextDocument } from "../../utils/hooks/use/useFormContextDocu
 import { useXrmUpdated } from "../../utils/hooks/use/useXrmUpdated";
 import { RetrieveAttributes } from "../../utils/hooks/XrmApi/RetrieveAttributes";
 import { RetrieveAttributesMetaData } from "../../utils/hooks/XrmApi/RetrieveAttributesMetaData";
+import { RetrieveSetName } from "../../utils/hooks/XrmApi/RetrieveSetName";
 import { getReadableMSType, MSDateFormat, MSType, type AttributeMetadata } from "../../utils/types/requestsType";
 import {
     BigIntNode,
@@ -62,6 +65,7 @@ import {
     StringNode,
     type AttributeProps
 } from "./nodes";
+import { defaultWriteSettings, writeCreate, writeDelete, writeUpdate, type WriteSettings } from "./writeRecord";
 import { useUpdateEffect } from "@custom-react-hooks/all";
 import DetailsSnackbar from "~utils/components/DetailsSnackbar";
 import { PROJECT_PREFIX } from "~utils/global/var";
@@ -89,7 +93,9 @@ const UpdateRecordContainer = forwardRef<ProcessRef, ProcessProps>(function Upda
                     Components={{
                         detailsFile: DetailsSnackbar
                     }}>
-                    <UpdateRecord ref={ref} {...props} />
+                    <ConfirmProvider>
+                        <UpdateRecord ref={ref} {...props} />
+                    </ConfirmProvider>
                 </SnackbarProvider>
             </LocalizationProvider>
         </StyledEngineProvider>
@@ -105,6 +111,7 @@ const UpdateRecord = forwardRef<ProcessRef, ProcessProps>(function UpdateRecord(
 ) {
     const { isDebug } = useSpDevTools();
     const { enqueueSnackbar } = useSnackbar();
+    const openConfirmDialog = useConfirm();
     const { formContext } = useFormContextDocument();
     const { xrmUpdated } = useXrmUpdated();
 
@@ -129,6 +136,9 @@ const UpdateRecord = forwardRef<ProcessRef, ProcessProps>(function UpdateRecord(
     const { value: resetEntity, toggle: toggleResetEntity } = useBoolean(false);
 
     const [selectedMode, setSelectedMode] = useState<AvailableModes>("create");
+
+    const [writeSettings, setWriteSettings] = useState<WriteSettings>(defaultWriteSettings);
+    const setName = RetrieveSetName(entityName);
 
     const setEntityname = (entityname: string) => {
         setRecordsIds([]);
@@ -180,7 +190,7 @@ const UpdateRecord = forwardRef<ProcessRef, ProcessProps>(function UpdateRecord(
         Xrm.Utility.showProgressIndicator(`Updating ${recordsIds.length} ${entityName}`);
 
         recordsIds.forEach((recordid) => {
-            Xrm.WebApi.online.updateRecord(entityName, recordid, attributesValues).then(
+            writeUpdate(entityName, setName, recordid, attributesValues, writeSettings).then(
                 function success(_result) {
                     Xrm.Utility.closeProgressIndicator();
                     enqueueSnackbar(entityName + " " + recordid + " updated.", { variant: "success" });
@@ -206,7 +216,15 @@ const UpdateRecord = forwardRef<ProcessRef, ProcessProps>(function UpdateRecord(
                 }
             );
         });
-    }, [attributesValueKeys.length, attributesValues, enqueueSnackbar, entityName, recordsIds]);
+    }, [
+        attributesValueKeys.length,
+        attributesValues,
+        enqueueSnackbar,
+        entityName,
+        recordsIds,
+        setName,
+        writeSettings
+    ]);
 
     const launchCreate = useCallback(() => {
         debugLog("Launch Create for", entityName, "with", attributesValues);
@@ -214,7 +232,7 @@ const UpdateRecord = forwardRef<ProcessRef, ProcessProps>(function UpdateRecord(
         if (attributesValueKeys.length === 0) return;
 
         Xrm.Utility.showProgressIndicator("Creating " + entityName);
-        Xrm.WebApi.online.createRecord(entityName, attributesValues).then(
+        writeCreate(entityName, setName, attributesValues, writeSettings).then(
             function success(result) {
                 Xrm.Utility.closeProgressIndicator();
                 setRecordsIds([result.id]);
@@ -240,7 +258,53 @@ const UpdateRecord = forwardRef<ProcessRef, ProcessProps>(function UpdateRecord(
                 console.error(error.message);
             }
         );
-    }, [attributesValueKeys.length, attributesValues, enqueueSnackbar, entityName]);
+    }, [attributesValueKeys.length, attributesValues, enqueueSnackbar, entityName, setName, writeSettings]);
+
+    const launchDelete = useCallback(async () => {
+        debugLog("Launch Delete for", entityName, recordsIds);
+
+        if (recordsIds.length === 0) return;
+
+        const { confirmed } = await openConfirmDialog({
+            title: `Delete ${recordsIds.length} ${entityName}?`,
+            description: "This cannot be undone.",
+            confirmationText: "Delete",
+            confirmationButtonProps: { color: "error", variant: "contained" },
+            cancellationText: "Cancel"
+        });
+        if (!confirmed) return;
+
+        Xrm.Utility.showProgressIndicator(`Deleting ${recordsIds.length} ${entityName}`);
+
+        recordsIds.forEach((recordid) => {
+            writeDelete(entityName, setName, recordid, writeSettings).then(
+                function success(_result) {
+                    Xrm.Utility.closeProgressIndicator();
+                    setRecordsIds((ids) => ids.filter((id) => id !== recordid));
+                    enqueueSnackbar(entityName + " " + recordid + " deleted.", { variant: "success" });
+                },
+                function (error) {
+                    Xrm.Utility.closeProgressIndicator();
+                    enqueueSnackbar("Deleting " + entityName + " " + recordid + " has encountered an error.", {
+                        variant: "detailsFile",
+                        detailsVariant: "error",
+                        persist: true,
+                        allowDownload: true,
+                        detailsNode: (
+                            <Typography gutterBottom variant="caption" style={{ color: "#000", display: "block" }}>
+                                {`(0x${error.errorCode.toString(16)}) ${error.message}`}
+                            </Typography>
+                        ),
+                        downloadButtonLabel: "Download log file",
+                        fileContent: error.raw,
+                        fileName: "ErrorDetails.txt"
+                    });
+
+                    console.error(error.message);
+                }
+            );
+        });
+    }, [enqueueSnackbar, entityName, openConfirmDialog, recordsIds, setName, writeSettings]);
 
     return (
         <Stack spacing={0.5} width="-webkit-fill-available" padding="10px" height="calc(100% - 10px)">
@@ -250,10 +314,13 @@ const UpdateRecord = forwardRef<ProcessRef, ProcessProps>(function UpdateRecord(
                 setCurrentRecord={setCurrentRecord}
                 launchUpdate={launchUpdate}
                 launchCreate={launchCreate}
+                launchDelete={launchDelete}
                 setFilterAttribute={setFilterAttribute}
                 entityname={entityName}
                 recordsIds={recordsIds}
                 setMode={(mode: AvailableModes) => setSelectedMode(mode)}
+                writeSettings={writeSettings}
+                setWriteSettings={setWriteSettings}
             />
             <Divider />
             <AttributesList
@@ -403,6 +470,9 @@ function AttributesList(props: AttributesListProps) {
                                 attribute={metadata}
                                 entityname={props.entityname}
                                 value={attributesRetrieved[attributeName]}
+                                valueTarget={
+                                    attributesRetrieved[attributeName + "@Microsoft.Dynamics.CRM.lookuplogicalname"]
+                                }
                                 filter={filter}
                                 resetAttributes={props.resetAttributes}
                                 attributeToUpdateManager={props.attributeToUpdateManager}
@@ -430,6 +500,7 @@ type AttributeNodeProps = {
     attribute: AttributeMetadata;
     entityname: string;
     value: any;
+    valueTarget?: string;
     disabled: boolean;
     filter: string;
     resetAttributes: boolean;
@@ -530,6 +601,7 @@ const AttributeNode = React.memo((props: AttributeNodeProps) => {
                 attribute={props.attribute}
                 entityname={props.entityname}
                 value={props.value}
+                valueTarget={props.valueTarget}
                 manageDirty={{ set: manageDirty.setTrue, remove: manageDirty.setFalse }}
                 reset={toReset}
                 remove={toRemove}
@@ -549,7 +621,7 @@ const AttributeNode = React.memo((props: AttributeNodeProps) => {
     );
 });
 
-function AttributeFactory(props: AttributeProps & { entityname: string }) {
+function AttributeFactory(props: AttributeProps & { entityname: string; valueTarget?: string }) {
     const theme = useTheme();
 
     switch (props.attribute.MStype) {
@@ -564,6 +636,8 @@ function AttributeFactory(props: AttributeProps & { entityname: string }) {
                     disabled={props.disabled}
                     attributeToUpdateManager={props.attributeToUpdateManager}
                     theme={theme}
+                    entityname={props.entityname}
+                    valueTarget={props.valueTarget}
                 />
             );
         case MSType.String:
@@ -752,11 +826,15 @@ type NavBarProps = {
     setCurrentRecord: () => void;
     launchUpdate: () => void;
     launchCreate: () => void;
+    launchDelete: () => void;
     setFilterAttribute: (str: string) => void;
     entityname: string;
     recordsIds: string[];
     setMode: (mode: AvailableModes) => void;
+    writeSettings: WriteSettings;
+    setWriteSettings: Dispatch<SetStateAction<WriteSettings>>;
 };
+
 function NavTopBar(props: NavBarProps) {
     return (
         <Stack key="topbar" spacing={0.5} width="100%">
@@ -768,6 +846,8 @@ function NavTopBar(props: NavBarProps) {
                 recordIds={props.recordsIds}
                 multiple
             />
+
+            <RequestSettingsBar settings={props.writeSettings} setSettings={props.setWriteSettings} />
 
             <Stack direction={"row"} key="refreshandlaunch" spacing={3} width="100%" whiteSpace="nowrap">
                 <Stack direction="row" spacing={0.5} alignItems="center" width="100%">
@@ -807,6 +887,15 @@ function NavTopBar(props: NavBarProps) {
                             ),
                             action: props.launchUpdate,
                             onSelect: () => props.setMode("update")
+                        },
+                        {
+                            title: (
+                                <Stack direction="row" spacing={2}>
+                                    <DeleteIcon /> <div>Launch Delete</div>
+                                </Stack>
+                            ),
+                            action: props.launchDelete,
+                            disabled: props.recordsIds.length === 0
                         }
                     ]}
                     actionIndex={props.recordsIds.length === 0 ? 0 : 1}

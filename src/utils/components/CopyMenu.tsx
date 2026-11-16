@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import React, { useCallback } from 'react'
 import { Menu, MenuItem } from "@mui/material";
 import useCopyWithSnack from '../hooks/use/useCopyWithSnack';
 
@@ -8,10 +8,11 @@ interface CopyMenuProps {
     items: {
         title: string,
         content: string
-    }[]
+    }[],
+    children?: React.ReactNode
 }
 function CopyMenu(props: CopyMenuProps) {
-    const { onClose, anchorElement, items } = props;
+    const { onClose, anchorElement, items, children } = props;
 
     const copy = useCopyWithSnack({ callback: onClose });
 
@@ -38,6 +39,7 @@ function CopyMenu(props: CopyMenuProps) {
                         }
                     })
                 }
+                {children}
 
             </Menu>
         </>

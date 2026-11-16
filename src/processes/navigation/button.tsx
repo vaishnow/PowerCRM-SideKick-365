@@ -6,7 +6,7 @@ import { ToolPanelButton } from "~utils/global/.toolPanelButton";
 class NavigationButton extends ToolPanelButton {
     static id = "navigation";
     constructor() {
-        super("navigation", "Navigation", () => MapIcon, 175);
+        super("navigation", "Navigation", () => MapIcon, 340);
         this.description = (
             <>
                 <Typography>
